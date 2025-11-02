@@ -49,26 +49,31 @@ const Footer = () => {
     {
       name: "Twitter",
       icon: <Twitter className="w-5 h-5" />,
+      URL: "https://x.com/AnirThapa195903",
       gradient: "from-blue-400 to-blue-600",
     },
     {
       name: "LinkedIn",
       icon: <Linkedin className="w-5 h-5" />,
+      URL: "https://www.linkedin.com/in/anir-jung-thapa-270a922bb/",
       gradient: "from-blue-600 to-blue-800",
     },
     {
       name: "Instagram",
       icon: <Instagram className="w-5 h-5" />,
+      URL: "https://www.instagram.com/aneerthapa/ ",
       gradient: "from-pink-500 to-purple-600",
     },
     {
       name: "Facebook",
       icon: <Facebook className="w-5 h-5" />,
+      URL: "https://www.facebook.com/ajt.anir",
       gradient: "from-blue-500 to-blue-700",
     },
     {
       name: "GitHub",
       icon: <Github className="w-5 h-5" />,
+      URL: "https://github.com/anirthapa",
       gradient: "from-gray-700 to-gray-900",
     },
   ];
@@ -296,8 +301,10 @@ const Footer = () => {
                 <div className="flex gap-3">
                   {socialLinks.map((social) => (
                     <a
+                      target="_blank"
+                      rel="noopener noreferrer"
                       key={social.name}
-                      href="#"
+                      href={social.URL}
                       className={`social-hover w-10 h-10 bg-gradient-to-br ${social.gradient} rounded-lg flex items-center justify-center text-white shadow-md`}
                       aria-label={social.name}
                     >
