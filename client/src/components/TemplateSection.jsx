@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { ArrowRight, X, Eye, Zap, Star, Sparkles } from "lucide-react";
 
 // Import your actual template components
