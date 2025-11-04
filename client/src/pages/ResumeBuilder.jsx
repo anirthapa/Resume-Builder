@@ -1,7 +1,7 @@
 import React from "react";
 
 const ResumeBuilder = () => {
-  return <div>ResumeBuilder</div>;
+  return <div></div>;
 };
 
 export default ResumeBuilder;
