@@ -40,7 +40,7 @@ npm install
 npm run dev
 ```
 
-## 🚀 You're All Set!
+## 🚀 You're All Set to go!
 - Backend runs on `http://localhost:5000`
 - Frontend runs on `http://localhost:5173`
 

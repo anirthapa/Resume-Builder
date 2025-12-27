@@ -17,8 +17,8 @@ import {
 const CreativePortfolioTemplate = ({
   colorScheme = "creative-purple",
   resumeData,
-  fontSize = "medium",
-  spacing = "normal",
+  // fontSize = "medium",
+  // spacing = "normal",
 }) => {
   const colorSchemes = {
     "creative-purple": {
