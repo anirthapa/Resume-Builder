@@ -4,3 +4,8 @@ export const formatDate = (date) => {
 export const parseDate = (dateString) => {
   return new Date(Date.parse(dateString));
 };
+
+export const isValidDate = (date) => {
+  return date instanceof Date && !isNaN(date);
+};
+
