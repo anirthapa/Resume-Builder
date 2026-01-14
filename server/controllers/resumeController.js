@@ -130,6 +130,9 @@ const deleteResume = async (req, res, next) => {
   }
 };
 
+// 
+
+
 module.exports = {
   getAllResumes,
   getResumeById,
