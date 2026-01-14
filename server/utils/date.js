@@ -24,3 +24,16 @@ export const dateDifferenceInMonths = (date1, date2) => {
   const diffTime = Math.abs(date2 - date1);
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 30));
 };
+
+// Function to get the difference in years between two dates
+export const dateDifferenceInYears = (date1, date2) => {
+  const diffTime = Math.abs(date2 - date1);
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 365));
+};
+
+//  Function to add days to a date
+export const addDays = (date, days) => {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+};
