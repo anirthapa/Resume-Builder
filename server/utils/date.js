@@ -2,7 +2,7 @@
 export const formatDate = (date) => {
   return new Intl.DateTimeFormat("en-US").format(date);
 };
-
+ 
 // Function to parse a date string into a Date object
 export const parseDate = (dateString) => {
   return new Date(Date.parse(dateString));
