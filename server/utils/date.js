@@ -19,7 +19,7 @@ export const dateDifferenceInDays = (date1, date2) => {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 };
 
-// Function to get the difference in months between two dates
+// Function to get the difference in months between two dates (approximating a month as 30 days)
 export const dateDifferenceInMonths = (date1, date2) => {
   const diffTime = Math.abs(date2 - date1);
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 30));
