@@ -2,7 +2,7 @@
 export const formatDate = (date) => {
   return new Intl.DateTimeFormat("en-US").format(date);
 };
-
+ 
 // Function to parse a date string into a Date object
 export const parseDate = (dateString) => {
   return new Date(Date.parse(dateString));
@@ -20,7 +20,7 @@ export const dateDifferenceInDays = (date1, date2) => {
 };
 
 // Function to get the difference in months between two dates
-export const dateDifferenceInMonths = (date1, date2) => {
+export const dateDifferenceInMonths = (date1, date2) => { 
   const diffTime = Math.abs(date2 - date1);
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 30));
 };
