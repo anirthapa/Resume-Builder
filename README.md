@@ -45,3 +45,5 @@ npm run dev
 - Frontend runs on `http://localhost:5173`
 
 
+#Thanks! Press ⭐ … make my dopamine happy.
+
