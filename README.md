@@ -7,18 +7,18 @@ cd resume-builder
 ```
 
 ## 2. Backend Setup
-```bash
+```bash 
 # Navigate to backend directory
-cd server
+cd server 
 
 # Install dependencies
 npm install
 ```
 
-### Create .env file
+### Create .env file  
 ```
 PORT=5000
-MONGODB_URI=mongodb://localhost:27017/resume-builder
+MONGODB_URI=mongodb://localhost:27017/resume-builderr
 
 ```
 
