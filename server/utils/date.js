@@ -33,7 +33,7 @@ export const dateDifferenceInYears = (date1, date2) => {
 
 //  Function to add days to a date and return the new date  
 export const addDays = (date, days) => {
-  const result = new Date(date);
+  const result = new Date(date); 
   result.setDate(result.getDate() + days);
   return result;
 };  
