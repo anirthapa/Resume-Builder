@@ -31,9 +31,9 @@ export const dateDifferenceInYears = (date1, date2) => {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 365));
 };
 
-//  Function to add days to a date and return the new date  
+//  Function to add days to a date and return the new date
 export const addDays = (date, days) => {
-  const result = new Date(date); 
+  const result = new Date(date);
   result.setDate(result.getDate() + days);
   return result;
-};  
+};
