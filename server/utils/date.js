@@ -25,7 +25,7 @@ export const dateDifferenceInMonths = (date1, date2) => {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 30));
 };
 
-// Function to get the difference in years between two dates
+// Function to get the difference in years between two dates (approximating a year as 365 days)
 export const dateDifferenceInYears = (date1, date2) => {
   const diffTime = Math.abs(date2 - date1);
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 365));
