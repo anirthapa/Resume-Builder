@@ -1,15 +1,12 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ArrowRight, X, Eye, Zap, Star, Sparkles } from "lucide-react";
 
 // Import your actual template components
-import AcademicResearchTemplate from "./AcademicResearchTemplate";
-import CreativePortfolioTemplate from "./CreativePortfolioTemplate";
-import ModernProfessionalTemplate from "./ModernProfessionalTemplate";
-import CorporateExecutiveTemplate from "./CorporateExecutiveTemplate";
-import MinimalistCleanTemplate from "./MinimalistCleanTemplate";
-import CleanSidebarTemplate from "./CleanSidebarTemplate";
+import ResumeTemplate from "./ResumeTemplate";
 
 const TemplatesSection = () => {
+  const navigate = useNavigate();
   const [previewMode, setPreviewMode] = useState(null);
   const [hoveredTemplate, setHoveredTemplate] = useState(null);
 
@@ -18,7 +15,8 @@ const TemplatesSection = () => {
       id: "academic-research",
       name: "Academic Research",
       description: "Perfect for researchers and academics",
-      component: AcademicResearchTemplate,
+      component: ResumeTemplate,
+      variant: "academic",
       gradient: "from-blue-600 to-blue-800",
       type: "AcademicResearchTemplate",
       popular: false,
@@ -27,7 +25,8 @@ const TemplatesSection = () => {
       id: "creative-portfolio",
       name: "Creative Portfolio",
       description: "Showcase your creative work",
-      component: CreativePortfolioTemplate,
+      component: ResumeTemplate,
+      variant: "creative",
       gradient: "from-purple-600 to-pink-600",
       type: "CreativePortfolioTemplate",
       popular: true,
@@ -36,7 +35,8 @@ const TemplatesSection = () => {
       id: "modern-professional",
       name: "Modern Professional",
       description: "Contemporary design for modern careers",
-      component: ModernProfessionalTemplate,
+      component: ResumeTemplate,
+      variant: "modern",
       gradient: "from-orange-600 to-orange-700",
       type: "ModernProfessionalTemplate",
       popular: true,
@@ -45,7 +45,8 @@ const TemplatesSection = () => {
       id: "corporate-executive",
       name: "Corporate Executive",
       description: "Executive-level sophisticated design",
-      component: CorporateExecutiveTemplate,
+      component: ResumeTemplate,
+      variant: "executive",
       gradient: "from-slate-700 to-slate-900",
       type: "CorporateExecutiveTemplate",
       popular: false,
@@ -54,7 +55,8 @@ const TemplatesSection = () => {
       id: "minimalist-clean",
       name: "Minimalist Clean",
       description: "Less is more - clean and simple",
-      component: MinimalistCleanTemplate,
+      component: ResumeTemplate,
+      variant: "minimalist",
       gradient: "from-gray-600 to-gray-800",
       type: "MinimalistCleanTemplate",
       popular: false,
@@ -63,7 +65,8 @@ const TemplatesSection = () => {
       id: "clean-sidebar",
       name: "Clean Sidebar",
       description: "Organized layout with sidebar",
-      component: CleanSidebarTemplate,
+      component: ResumeTemplate,
+      variant: "sidebar",
       gradient: "from-teal-600 to-cyan-700",
       type: "CleanSidebarTemplate",
       popular: true,
@@ -71,7 +74,7 @@ const TemplatesSection = () => {
   ];
 
   const handleUseTemplate = (templateType) => {
-    window.open(`/resume-builder?template=${templateType}`, "_blank");
+    navigate(`/resume-builder?template=${encodeURIComponent(templateType)}`);
   };
 
   const TemplateCard = ({ template }) => {
@@ -113,7 +116,7 @@ const TemplatesSection = () => {
                 }}
               >
                 <div className="w-full max-w-4xl bg-white shadow-sm">
-                  <TemplateComponent />
+                  <TemplateComponent variant={template.variant} />
                 </div>
               </div>
             </div>
@@ -225,7 +228,7 @@ const TemplatesSection = () => {
                   overflowY: "auto",
                 }}
               >
-                <TemplateComponent />
+                <TemplateComponent variant={template.variant} />
               </div>
             </div>
           </div>
@@ -269,7 +272,7 @@ const TemplatesSection = () => {
       id="templates"
       className="py-20 bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30 relative overflow-hidden"
     >
-      <style jsx>{`
+      <style>{`
         @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap");
         .hero-text {
           font-family: "Space Grotesk", sans-serif;
