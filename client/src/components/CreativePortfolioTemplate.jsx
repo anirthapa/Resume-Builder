@@ -47,7 +47,7 @@ const CreativePortfolioTemplate = ({
     },
   };
 
-  const colors = colorSchemes[colorScheme];
+  const colors = colorSchemes[colorScheme] || colorSchemes[Object.keys(colorSchemes)[0]];
 
   const defaultData = {
     personalInfo: {

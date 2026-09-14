@@ -16,8 +16,6 @@ import {
 const CorporateExecutiveTemplate = ({
   colorScheme = "navy",
   resumeData,
-  fontSize = "medium",
-  spacing = "normal",
 }) => {
   const colorSchemes = {
     navy: {
@@ -70,7 +68,7 @@ const CorporateExecutiveTemplate = ({
     },
   };
 
-  const colors = colorSchemes[colorScheme];
+  const colors = colorSchemes[colorScheme] || colorSchemes[Object.keys(colorSchemes)[0]];
 
   const defaultData = {
     personalInfo: {

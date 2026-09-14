@@ -80,7 +80,7 @@ const Footer = () => {
 
   return (
     <footer className="relative overflow-hidden">
-      <style jsx>{`
+      <style>{`
         @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap");
 
         .hero-text {

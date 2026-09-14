@@ -5,8 +5,6 @@ import { Mail, Phone, MapPin, Globe, Linkedin, Calendar } from "lucide-react";
 const MinimalistCleanTemplate = ({
   colorScheme = "black",
   resumeData,
-  fontSize = "medium",
-  spacing = "normal",
 }) => {
   const colorSchemes = {
     black: {
@@ -59,7 +57,7 @@ const MinimalistCleanTemplate = ({
     },
   };
 
-  const colors = colorSchemes[colorScheme];
+  const colors = colorSchemes[colorScheme] || colorSchemes[Object.keys(colorSchemes)[0]];
 
   const defaultData = {
     personalInfo: {

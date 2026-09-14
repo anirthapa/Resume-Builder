@@ -5,8 +5,6 @@ import { Mail, Phone, MapPin, Globe, Linkedin, Calendar } from "lucide-react";
 const ModernProfessionalTemplate = ({
   colorScheme = "blue",
   resumeData,
-  fontSize = "medium",
-  spacing = "normal",
 }) => {
   // Simple, professional color schemes
   const colorSchemes = {
@@ -54,7 +52,7 @@ const ModernProfessionalTemplate = ({
     },
   };
 
-  const colors = colorSchemes[colorScheme];
+  const colors = colorSchemes[colorScheme] || colorSchemes[Object.keys(colorSchemes)[0]];
 
   // Default professional data
   const defaultData = {

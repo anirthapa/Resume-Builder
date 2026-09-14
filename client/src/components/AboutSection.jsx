@@ -4,7 +4,7 @@ import { Heart, Users, Sparkles, ArrowRight, Star } from "lucide-react";
 const EmotionalAboutSection = () => {
   return (
     <section className="py-16 lg:py-24 relative overflow-hidden" id="about">
-      <style jsx>{`
+      <style>{`
         @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap");
 
         .hero-text {

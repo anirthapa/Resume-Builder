@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   CheckCircle,
   Zap,
@@ -72,7 +72,7 @@ const FeaturesSection = () => {
 
   return (
     <>
-      <style jsx>{`
+      <style>{`
         @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap");
 
         .hero-text {

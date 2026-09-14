@@ -39,7 +39,7 @@ const Navbar = () => {
   return (
     <>
       {/* Custom font styles */}
-      <style jsx>{`
+      <style>{`
         @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap");
 
         .logo-font {

@@ -17,8 +17,6 @@ import {
 const AcademicResearchTemplate = ({
   colorScheme = "academic-blue",
   resumeData,
-  fontSize = "medium",
-  spacing = "normal",
 }) => {
   const colorSchemes = {
     "academic-blue": {
@@ -47,7 +45,7 @@ const AcademicResearchTemplate = ({
     },
   };
 
-  const colors = colorSchemes[colorScheme];
+  const colors = colorSchemes[colorScheme] || colorSchemes["academic-blue"];
 
   const defaultData = {
     personalInfo: {
