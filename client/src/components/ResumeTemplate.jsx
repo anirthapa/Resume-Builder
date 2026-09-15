@@ -1,19 +1,40 @@
-import { Mail, MapPin, Phone, Globe, Linkedin } from "lucide-react";
+import React from "react";
+import ResumeRenderer from "../templates/index";
+import { migrateResumeData } from "../utils/resumeDefaults";
 
-const palette = { navy: "#18324b", ink: "#18212f", blue: "#2563eb", emerald: "#087f5b", plum: "#7c3aed", rust: "#d95f32" };
-const date = (value) => { if (!value || value === "Present") return value || ""; const [year, month] = value.split("-"); return new Date(Number(year), Number(month || 1) - 1).toLocaleDateString("en-US", { month: "short", year: "numeric" }); };
-const bullets = (item) => (item.responsibilities || []).filter(Boolean);
+const palette = {
+  navy: "#18324b",
+  ink: "#18212f",
+  blue: "#2563eb",
+  emerald: "#087f5b",
+  plum: "#7c3aed",
+  rust: "#d95f32",
+};
 
-export default function ResumeTemplate({ resumeData = {}, variant = "modern", colorScheme = "blue" }) {
-  const fallback = { personalInfo: { firstName: "Maya", lastName: "Patel", title: "Product Designer", email: "maya.patel@email.com", phone: "+1 (415) 555-0138", location: "San Francisco, CA", linkedin: "linkedin.com/in/mayapatel", website: "mayapatel.design" }, summary: "Product designer turning complex problems into clear, useful experiences. Skilled in research, systems thinking, prototyping, and shipping with cross-functional teams.", experience: [{ id: 1, position: "Senior Product Designer", company: "Northstar Labs", location: "San Francisco, CA", startDate: "2022-03", current: true, responsibilities: ["Led end-to-end design for a platform used by 40k+ monthly users", "Built a shared design system that reduced delivery time by 25%", "Partnered with engineering to ship accessible product experiences"] }], education: [{ id: 1, degree: "BFA", field: "Interaction Design", institution: "California College of the Arts", endDate: "2019-05", gpa: "3.8" }], skills: ["Figma", "Design systems", "User research", "Prototyping", "Accessibility"], certifications: [] };
-  const source = { ...fallback, ...resumeData, personalInfo: { ...fallback.personalInfo, ...(resumeData.personalInfo || {}) } }; const activeVariant = source.__template || variant; const p = source.personalInfo; const accent = palette[colorScheme] || colorScheme || palette.blue; const skills = Array.isArray(source.skills) ? source.skills : Object.values(source.skills || {}).flat();
-  const sectionTitle = (title) => <h2 className="resume-section-title">{title}</h2>;
-  const experience = <section>{sectionTitle("Experience")}{(source.experience || []).map((item) => <article className="resume-entry" key={item.id}><div className="entry-top"><div><h3>{item.position || "Job title"}</h3><strong>{item.company || "Company"}</strong></div><span>{date(item.startDate)} — {item.current ? "Present" : date(item.endDate)}</span></div><small>{item.location}</small><ul>{bullets(item).map((bullet, i) => <li key={i}>{bullet}</li>)}</ul></article>)}</section>;
-  const education = <section>{sectionTitle("Education")}{(source.education || []).map((item) => <article className="resume-entry education-entry" key={item.id}><div className="entry-top"><div><h3>{item.degree || "Degree"}{item.field ? ` · ${item.field}` : ""}</h3><strong>{item.institution || "Institution"}</strong></div><span>{date(item.endDate || item.startDate)}</span></div>{item.gpa && <small>GPA: {item.gpa}</small>}</article>)}</section>;
-  const skillsSection = <section>{sectionTitle("Skills")}{skills.length ? <div className="skill-list">{skills.map((skill, i) => <span key={`${skill}-${i}`}>{skill}</span>)}</div> : <p className="muted">Add your most relevant skills.</p>}</section>;
-  const certs = (source.certifications || []).filter((x) => x.name); const certifications = certs.length ? <section>{sectionTitle("Certifications")}{certs.map((x) => <div className="cert-row" key={x.id}><strong>{x.name}</strong><span>{x.issuer} {x.date && `· ${date(x.date)}`}</span></div>)}</section> : null;
-  const contact = <div className="contact-row">{p.email && <span><Mail size={12}/>{p.email}</span>}{p.phone && <span><Phone size={12}/>{p.phone}</span>}{p.location && <span><MapPin size={12}/>{p.location}</span>}{p.linkedin && <span><Linkedin size={12}/>{p.linkedin}</span>}{p.website && <span><Globe size={12}/>{p.website}</span>}</div>;
-  const header = <header className="resume-header"><div><h1>{p.firstName || "Your"} {p.lastName || "Name"}</h1><p>{p.title || "Professional title"}</p>{activeVariant === "creative" && <em>Thoughtful work. Clear outcomes.</em>}</div>{contact}</header>;
-  const content = <>{source.summary && <section>{sectionTitle(activeVariant === "academic" ? "Research Profile" : "Professional Summary")}<p className="summary-text">{source.summary}</p></section>}{experience}{education}{skillsSection}{certifications}{activeVariant === "creative" && <section>{sectionTitle("Selected Work")}<p className="muted">Portfolio and case studies available at {p.website || "your website"}.</p></section>}</>;
-  return <div className={`resume-doc resume-${activeVariant}`} style={{ "--resume-accent": accent }}><>{header}</><main className="resume-content">{activeVariant === "sidebar" ? <div className="resume-columns"><aside>{skillsSection}{certifications}</aside><div>{source.summary && <section>{sectionTitle("Profile")}<p className="summary-text">{source.summary}</p></section>}{experience}{education}</div></div> : activeVariant === "academic" ? <div className="academic-columns"><div>{source.summary && <section>{sectionTitle("Research Profile")}<p className="summary-text">{source.summary}</p></section>}{experience}{education}</div><aside>{skillsSection}{certifications}</aside></div> : content}</main></div>;
+export default function ResumeTemplate({
+  resumeData = {},
+  variant = "modern",
+  colorScheme = "blue",
+  customization = {},
+}) {
+  const normalizedData = migrateResumeData(resumeData);
+  const resolvedColor =
+    customization.color ||
+    palette[colorScheme] ||
+    (typeof colorScheme === "string" && colorScheme.startsWith("#") ? colorScheme : null) ||
+    palette.blue;
+
+  const mergedCustomization = {
+    ...normalizedData.customization,
+    ...customization,
+    template: customization.template || variant || normalizedData.customization?.template || "modern",
+    color: resolvedColor,
+  };
+
+  return (
+    <ResumeRenderer
+      data={normalizedData}
+      customization={mergedCustomization}
+    />
+  );
 }
