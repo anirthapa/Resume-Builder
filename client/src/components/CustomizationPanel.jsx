@@ -156,21 +156,39 @@ export default function CustomizationPanel({
           <Type className="w-3.5 h-3.5 text-orange-600" />
           Typography / Font Family
         </label>
-        <div className="grid grid-cols-1 gap-1.5">
-          {FONT_OPTIONS.map((f) => (
-            <button
-              key={f.id}
-              onClick={() => handleUpdate("fontFamily", f.id)}
-              className={`px-3 py-2 rounded-lg border text-left flex items-center justify-between transition text-xs ${
-                customization?.fontFamily === f.id
-                  ? "border-orange-500 bg-orange-50/30 text-orange-950 font-semibold"
-                  : "border-gray-200 hover:border-gray-300 text-gray-700 bg-white"
-              }`}
+        <div className="space-y-2">
+          <div className="relative">
+            <select
+              value={customization?.fontFamily || "inter"}
+              onChange={(e) => handleUpdate("fontFamily", e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 bg-white text-xs font-semibold text-gray-800 shadow-xs focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none cursor-pointer transition"
             >
-              <span style={{ fontFamily: f.family }}>{f.name}</span>
-              {customization?.fontFamily === f.id && <Check className="w-3.5 h-3.5 text-orange-600" />}
-            </button>
-          ))}
+              {FONT_OPTIONS.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Active Font Preview Card */}
+          {(() => {
+            const currentFont = FONT_OPTIONS.find((f) => f.id === (customization?.fontFamily || "inter")) || FONT_OPTIONS[0];
+            return (
+              <div
+                className="px-3.5 py-2.5 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-between text-xs"
+                style={{ fontFamily: currentFont.family }}
+              >
+                <div className="text-gray-800">
+                  <span className="font-bold text-sm block">The quick brown fox jumps</span>
+                  <span className="text-[11px] text-gray-500">{currentFont.name} · ABCDEFGHIJKLMNOPQRSTUVWXYZ</span>
+                </div>
+                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-white text-gray-700 border border-gray-200">
+                  Active
+                </span>
+              </div>
+            );
+          })()}
         </div>
       </div>
 

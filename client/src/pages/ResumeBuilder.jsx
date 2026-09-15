@@ -17,11 +17,14 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize2,
+  Printer,
+  Loader2,
   Image as ImageIcon,
 } from "lucide-react";
 import ResumeTemplate from "../components/ResumeTemplate";
 import CustomizationPanel from "../components/CustomizationPanel";
 import TemplateGalleryModal from "../components/TemplateGalleryModal";
+import { exportResumeToPdf } from "../utils/exportPdf";
 import {
   STARTER_RESUME,
   migrateResumeData,
@@ -70,6 +73,7 @@ export default function ResumeBuilder() {
   const [savedNotice, setSavedNotice] = useState(false);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Persist to local storage
   useEffect(() => {
@@ -161,6 +165,26 @@ export default function ResumeBuilder() {
     const lastName = data.personalInfo.lastName || "";
     document.title = `${firstName}_${lastName}_CV`;
     window.print();
+  };
+
+  const handleDirectDownloadPdf = async () => {
+    try {
+      setIsExporting(true);
+      const firstName = data.personalInfo.firstName || "My";
+      const lastName = data.personalInfo.lastName || "Resume";
+      const filename = `${firstName}_${lastName}_CV.pdf`;
+      const paperElement = document.getElementById("resume-paper-canvas");
+      if (!paperElement) {
+        window.print();
+        return;
+      }
+      await exportResumeToPdf(paperElement, filename);
+    } catch (err) {
+      console.error("Direct PDF export failed, falling back to print:", err);
+      handlePrint();
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // Export JSON
@@ -772,15 +796,42 @@ export default function ResumeBuilder() {
               </button>
             </div>
 
-            {/* PDF Export button */}
-            <button className="download-btn ml-auto" onClick={handlePrint}>
-              <Download size={15} /> Export PDF
-            </button>
+            {/* Export Actions: Direct Download + Print Dialog */}
+            <div className="flex items-center gap-2 ml-auto">
+              <button
+                className="download-btn flex items-center gap-1.5 cursor-pointer"
+                onClick={handleDirectDownloadPdf}
+                disabled={isExporting}
+                title="Directly download high-resolution A4 PDF"
+              >
+                {isExporting ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>Exporting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download size={14} />
+                    <span>Download PDF</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                className="ghost-btn flex items-center gap-1.5 cursor-pointer"
+                onClick={handlePrint}
+                title="Print via browser dialog / Save as vector PDF"
+              >
+                <Printer size={14} />
+                <span className="hidden sm:inline">Print</span>
+              </button>
+            </div>
           </div>
 
           {/* Paper Canvas */}
           <div className="paper-wrap">
             <div
+              id="resume-paper-canvas"
               className="paper transition-transform duration-150"
               style={{
                 transform: `scale(${zoom})`,
