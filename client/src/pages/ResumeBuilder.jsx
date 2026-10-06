@@ -1313,6 +1313,7 @@ export default function ResumeBuilder() {
                   <ResumePdfPreview
                     data={data}
                     page={previewPage}
+                    zoom={actualZoom}
                     onPageChange={setPreviewPage}
                     onStatus={setPdfStatus}
                   />

@@ -68,7 +68,7 @@ async function buildPdf(data) {
 }
 
 /** Render just the page the user is viewing. The source is the export PDF blob. */
-export async function renderResumePdfPage(blob, pageNumber) {
+export async function renderResumePdfPage(blob, pageNumber, targetWidth = 1408) {
   const { pdfjs } = await getRenderer();
   const task = pdfjs.getDocument({
     standardFontDataUrl: "/pdf-fonts/",
@@ -79,7 +79,9 @@ export async function renderResumePdfPage(blob, pageNumber) {
     if (pageNumber < 1 || pageNumber > pdf.numPages)
       throw new Error("That PDF page is unavailable.");
     const page = await pdf.getPage(pageNumber);
-    const viewport = page.getViewport({ scale: 1.6 });
+    const pageWidth = page.getViewport({ scale: 1 }).width;
+    const scale = Math.min(4.5, Math.max(1.6, targetWidth / pageWidth));
+    const viewport = page.getViewport({ scale });
     const canvas = document.createElement("canvas");
     canvas.width = Math.ceil(viewport.width);
     canvas.height = Math.ceil(viewport.height);

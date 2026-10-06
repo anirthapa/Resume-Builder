@@ -2,16 +2,29 @@ import { useEffect, useRef, useState } from "react";
 import { AlertCircle, FileText, Loader2 } from "lucide-react";
 import { generateResumePdf, renderResumePdfPage } from "../utils/exportPdf";
 
-export default function ResumePdfPreview({ data, page, onPageChange, onStatus }) {
+export default function ResumePdfPreview({ data, page, zoom, onPageChange, onStatus }) {
   const [result, setResult] = useState(null);
   const [imageUrl, setImageUrl] = useState("");
   const [displayed, setDisplayed] = useState(null);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
+  const [pixelRatio, setPixelRatio] = useState(() => window.devicePixelRatio || 1);
   const resultRef = useRef(null);
   const imageUrlRef = useRef("");
   const revisionRef = useRef(0);
+  // Render enough pixels for the displayed page, including high-density screens.
+  // Bucketing keeps small fit/resize changes from redrawing the same PDF page.
+  const targetWidth = Math.min(
+    2700,
+    Math.max(1408, Math.ceil((794 * zoom * pixelRatio * 1.5) / 128) * 128),
+  );
+
+  useEffect(() => {
+    const updatePixelRatio = () => setPixelRatio(window.devicePixelRatio || 1);
+    window.addEventListener("resize", updatePixelRatio);
+    return () => window.removeEventListener("resize", updatePixelRatio);
+  }, []);
 
   useEffect(
     () => () => {
@@ -61,7 +74,7 @@ export default function ResumePdfPreview({ data, page, onPageChange, onStatus })
     let cancelled = false;
     setBusy(true);
     onStatus({ busy: true, pageCount: result.pageCount });
-    renderResumePdfPage(result.blob, page)
+    renderResumePdfPage(result.blob, page, targetWidth)
       .then((image) => {
         if (cancelled || revision !== revisionRef.current) return;
         const nextUrl = URL.createObjectURL(image);
@@ -81,7 +94,7 @@ export default function ResumePdfPreview({ data, page, onPageChange, onStatus })
     return () => {
       cancelled = true;
     };
-  }, [result, page, onPageChange, onStatus]);
+  }, [result, page, targetWidth, onPageChange, onStatus]);
 
   return (
     <div className="pdf-preview" aria-label="Exact PDF preview" aria-busy={busy}>
