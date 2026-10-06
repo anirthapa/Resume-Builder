@@ -45,7 +45,7 @@ The existing production project is `resume-forge` in `anirs-projects-00fff74e`. 
 
 - Drafts use the `resume-builder-data` localStorage key in the current browser. They do not sync across devices; clearing browser data removes them.
 - **Export JSON** creates an editable backup. **Import JSON** validates and restores a backup up to 2 MB. Partial older backups do not acquire sample achievements.
-- **Download PDF** saves the same selectable-text A4 document shown in the live preview. Native pagination repeats page margins, keeps headings with content, and wraps long entries. Fonts are bundled locally.
+- **Download PDF** saves a selectable-text A4 document from the current resume data. Once the preview finishes updating, it displays pages from that same PDF. Native pagination repeats page margins, keeps headings with content, and wraps long entries. Fonts are bundled locally.
 - **Open PDF** opens that exact document in a new tab for printing. Choose Minimalist ATS for a single-column layout. Results depend on the receiving system; inspect the uploaded application.
 - Templates support colors, fonts, spacing, visibility, and section order. Profile images require an accessible PNG/JPEG URL and may require cross-origin permission. A failed image shows an actionable error instead of silently omitting it.
 
@@ -62,5 +62,5 @@ The optional API requires a separately configured MongoDB connection and deploym
 
 ## Editing and preview
 
-Undo/redo retains the last 60 edits within the current editor session. Compact layout adjusts font size, spacing, and margins together; it does not guarantee a single page. Preview generation is debounced, serialized, and reused for download. Only the first 20 pages are shown for unusually long resumes; all pages remain in the PDF.
+Undo/redo retains the last 60 edits within the current editor session. Compact layout adjusts font size, spacing, and margins together; it does not guarantee a single page. The PDF preview updates after a pause in editing and shows one page at a time; use the page controls to inspect the rest. The previous page stays visible while an update is prepared. On narrow screens, PDF generation pauses while the editor is shown. Download always uses the current resume data.
 

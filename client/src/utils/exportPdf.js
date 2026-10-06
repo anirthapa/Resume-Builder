@@ -1,23 +1,31 @@
 let rendererPromise;
 let queue = Promise.resolve();
-let latestKey;
-let latestResult;
+let latestRequest;
 
-async function buildPdf(data) {
+function getRenderer() {
   rendererPromise ||= Promise.all([
     import("@react-pdf/renderer"),
     import("../pdf/resumeDocument.js"),
     import("../pdf/fonts.js"),
     import("pdfjs-dist"),
-  ]).then(([renderer, layout, fonts, pdfjs]) => {
-    fonts.registerPdfFonts();
-    pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-      "pdfjs-dist/build/pdf.worker.min.mjs",
-      import.meta.url,
-    ).href;
-    return { renderer, layout, pdfjs };
-  });
-  const { renderer, layout, pdfjs } = await rendererPromise;
+  ])
+    .then(([renderer, layout, fonts, pdfjs]) => {
+      fonts.registerPdfFonts();
+      pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+        "pdfjs-dist/build/pdf.worker.min.mjs",
+        import.meta.url,
+      ).href;
+      return { renderer, layout, pdfjs };
+    })
+    .catch((error) => {
+      rendererPromise = undefined;
+      throw error;
+    });
+  return rendererPromise;
+}
+
+async function buildPdf(data) {
+  const { renderer, layout, pdfjs } = await getRenderer();
   let photoSource;
   if (data.personalInfo.showPhoto && data.personalInfo.photoUrl) {
     try {
@@ -53,41 +61,71 @@ async function buildPdf(data) {
   });
   const pdf = await task.promise;
   try {
-    const images = [];
-    for (let i = 1; i <= Math.min(pdf.numPages, 20); i++) {
-      const page = await pdf.getPage(i);
-      const viewport = page.getViewport({ scale: 1.4 });
-      const canvas = globalThis.document.createElement("canvas");
-      canvas.width = Math.ceil(viewport.width);
-      canvas.height = Math.ceil(viewport.height);
-      await page.render({ canvasContext: canvas.getContext("2d"), viewport })
-        .promise;
-      images.push(canvas.toDataURL("image/png"));
-      canvas.width = 0;
-      canvas.height = 0;
-    }
-    return { blob, images, pageCount: pdf.numPages };
+    return { blob, pageCount: pdf.numPages };
   } finally {
     await task.destroy();
   }
 }
 
-/** Serialize renderer work and share identical preview/download results. */
-export function generateResumePdf(data) {
-  const key = JSON.stringify(data);
-  if (key === latestKey && latestResult) return latestResult;
-  const snapshot = JSON.parse(key);
-  latestKey = key;
-  const job = queue.catch(() => {}).then(() => buildPdf(snapshot));
-  queue = job;
-  latestResult = job;
-  job.catch(() => {
-    if (latestResult === job) {
-      latestKey = undefined;
-      latestResult = undefined;
-    }
+/** Render just the page the user is viewing. The source is the export PDF blob. */
+export async function renderResumePdfPage(blob, pageNumber) {
+  const { pdfjs } = await getRenderer();
+  const task = pdfjs.getDocument({
+    standardFontDataUrl: "/pdf-fonts/",
+    data: new Uint8Array(await blob.arrayBuffer()),
   });
-  return job;
+  const pdf = await task.promise;
+  try {
+    if (pageNumber < 1 || pageNumber > pdf.numPages)
+      throw new Error("That PDF page is unavailable.");
+    const page = await pdf.getPage(pageNumber);
+    const viewport = page.getViewport({ scale: 1.6 });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.ceil(viewport.width);
+    canvas.height = Math.ceil(viewport.height);
+    try {
+      await page.render({ canvasContext: canvas.getContext("2d"), viewport })
+        .promise;
+      return await new Promise((resolve, reject) =>
+        canvas.toBlob(
+          (image) =>
+            image
+              ? resolve(image)
+              : reject(new Error("The PDF preview could not be drawn.")),
+          "image/png",
+        ),
+      );
+    } finally {
+      page.cleanup();
+      canvas.width = 0;
+      canvas.height = 0;
+    }
+  } finally {
+    await task.destroy();
+  }
+}
+
+/** Serialize PDF creation and drop previews superseded before they start. */
+export function generateResumePdf(data, { skipIfStale } = {}) {
+  const key = JSON.stringify(data);
+  if (latestRequest?.key === key) {
+    if (!skipIfStale) latestRequest.required = true;
+    else latestRequest.skipIfStale = skipIfStale;
+    return latestRequest.promise;
+  }
+  const snapshot = JSON.parse(key);
+  const request = { key, required: !skipIfStale, skipIfStale };
+  request.promise = queue.then(() => {
+    if (!request.required && request.skipIfStale?.())
+      throw new DOMException("Preview superseded", "AbortError");
+    return buildPdf(snapshot);
+  });
+  queue = request.promise.catch(() => {});
+  latestRequest = request;
+  request.promise.catch(() => {
+    if (latestRequest === request) latestRequest = undefined;
+  });
+  return request.promise;
 }
 
 export function downloadPdf(blob, filename) {

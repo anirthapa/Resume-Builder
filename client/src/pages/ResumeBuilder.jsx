@@ -18,6 +18,8 @@ import {
   FolderUp,
   ZoomIn,
   ZoomOut,
+  ChevronLeft,
+  ChevronRight,
   Maximize2,
   Printer,
   Loader2,
@@ -101,6 +103,10 @@ export default function ResumeBuilder() {
   const actualZoom = zoom ?? fitScale;
   const [isExporting, setIsExporting] = useState(false);
   const [pdfStatus, setPdfStatus] = useState({ busy: true, pageCount: 0 });
+  const [previewPage, setPreviewPage] = useState(1);
+  const [isNarrowScreen, setIsNarrowScreen] = useState(() =>
+    window.matchMedia("(max-width: 800px)").matches,
+  );
 
   // Persist to local storage
   useEffect(() => {
@@ -126,6 +132,12 @@ export default function ResumeBuilder() {
     if (wrap) observer.observe(wrap);
     if (paper) observer.observe(paper);
     return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 800px)");
+    const update = () => setIsNarrowScreen(media.matches);
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
   }, []);
   useEffect(() => {
     if (!notice) return;
@@ -1164,13 +1176,45 @@ export default function ResumeBuilder() {
                 ? "Comfortable layout"
                 : "Compact layout"}
             </button>
-            <span className="pdf-page-count" role="status">
-              {pdfStatus.busy
-                ? "Updating PDF…"
-                : pdfStatus.error
-                  ? "Check preview"
-                  : `${pdfStatus.pageCount} ${pdfStatus.pageCount === 1 ? "page" : "pages"} · A4`}
+            <span
+              className={`pdf-page-count ${pdfStatus.busy ? "is-busy" : ""} ${pdfStatus.error ? "has-error" : ""}`}
+              role="status"
+              aria-live="polite"
+            >
+              {pdfStatus.busy ? (
+                <>
+                  <span className="pdf-status-dot" />
+                  {pdfStatus.pageCount ? "Preview catching up" : "Preparing preview"}
+                </>
+              ) : pdfStatus.error ? (
+                "Preview needs attention"
+              ) : (
+                `${pdfStatus.pageCount} ${pdfStatus.pageCount === 1 ? "page" : "pages"} · A4`
+              )}
             </span>
+            {pdfStatus.pageCount > 1 && (
+              <nav className="pdf-page-nav" aria-label="PDF preview pages">
+                <button
+                  type="button"
+                  aria-label="Previous PDF page"
+                  onClick={() => setPreviewPage((value) => Math.max(1, value - 1))}
+                  disabled={pdfStatus.busy || previewPage <= 1}
+                >
+                  <ChevronLeft size={15} />
+                </button>
+                <span>{previewPage} / {pdfStatus.pageCount}</span>
+                <button
+                  type="button"
+                  aria-label="Next PDF page"
+                  onClick={() =>
+                    setPreviewPage((value) => Math.min(pdfStatus.pageCount, value + 1))
+                  }
+                  disabled={pdfStatus.busy || previewPage >= pdfStatus.pageCount}
+                >
+                  <ChevronRight size={15} />
+                </button>
+              </nav>
+            )}
             <div className="hidden lg:block">
               <p className="eyebrow">Document Canvas</p>
               <span className="text-xs text-gray-500">A4 Printable Format</span>
@@ -1220,8 +1264,8 @@ export default function ResumeBuilder() {
               <button
                 className="download-btn flex items-center gap-1.5 cursor-pointer"
                 onClick={handleDirectDownloadPdf}
-                disabled={isExporting || pdfStatus.busy || pdfStatus.error}
-                title="Directly download high-resolution A4 PDF"
+                disabled={isExporting}
+                title="Download the current resume as an A4 PDF"
               >
                 {isExporting ? (
                   <>
@@ -1265,7 +1309,14 @@ export default function ResumeBuilder() {
                   transformOrigin: "top left",
                 }}
               >
-                <ResumePdfPreview data={data} onStatus={setPdfStatus} />
+                {(!isNarrowScreen || previewMode) && (
+                  <ResumePdfPreview
+                    data={data}
+                    page={previewPage}
+                    onPageChange={setPreviewPage}
+                    onStatus={setPdfStatus}
+                  />
+                )}
               </div>
             </div>
           </div>
