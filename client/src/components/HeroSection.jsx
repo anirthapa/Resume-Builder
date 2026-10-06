@@ -10,19 +10,19 @@ import {
   MousePointer,
 } from "lucide-react";
 
+const animatedWords = [
+  { text: "Dream Resume", color: "from-primary-500 to-primary-700" },
+  { text: "Perfect CV", color: "from-blue-500 to-blue-700" },
+  { text: "Pro Profile", color: "from-purple-500 to-purple-700" },
+  { text: "Career Success", color: "from-green-500 to-green-700" },
+];
+
 const HeroSection = () => {
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [currentText, setCurrentText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isHovering, setIsHovering] = useState(false);
-
-  const animatedWords = [
-    { text: "Dream Resume", color: "from-primary-500 to-primary-700" },
-    { text: "Perfect CV", color: "from-blue-500 to-blue-700" },
-    { text: "Pro Profile", color: "from-purple-500 to-purple-700" },
-    { text: "Career Success", color: "from-green-500 to-green-700" },
-  ];
 
   useEffect(() => {
     const word = animatedWords[currentWordIndex].text;
@@ -44,7 +44,7 @@ const HeroSection = () => {
           setCurrentText(word.substring(0, currentText.length - 1));
         }
       },
-      isDeleting ? 100 : 150
+      isDeleting ? 100 : 150,
     );
 
     return () => clearTimeout(timer);

@@ -1,24 +1,69 @@
 export const FONT_OPTIONS = [
   { id: "inter", name: "Inter (Modern Sans)", family: "'Inter', sans-serif" },
-  { id: "dmsans", name: "DM Sans (Geometric)", family: "'DM Sans', sans-serif" },
+  {
+    id: "dmsans",
+    name: "DM Sans (Geometric)",
+    family: "'DM Sans', sans-serif",
+  },
   { id: "roboto", name: "Roboto (Neutral)", family: "'Roboto', sans-serif" },
-  { id: "outfit", name: "Outfit (Creative Display)", family: "'Outfit', sans-serif" },
-  { id: "merriweather", name: "Merriweather (Editorial Serif)", family: "'Merriweather', serif" },
-  { id: "playfair", name: "Playfair (Executive Serif)", family: "'Playfair Display', serif" },
-  { id: "jetbrains", name: "JetBrains Mono (Tech / Code)", family: "'JetBrains Mono', monospace" },
+  {
+    id: "outfit",
+    name: "Outfit (Creative Display)",
+    family: "'Outfit', sans-serif",
+  },
+  {
+    id: "merriweather",
+    name: "Merriweather (Editorial Serif)",
+    family: "'Merriweather', serif",
+  },
+  {
+    id: "playfair",
+    name: "Playfair (Executive Serif)",
+    family: "'Playfair Display', serif",
+  },
+  {
+    id: "jetbrains",
+    name: "JetBrains Mono (Tech / Code)",
+    family: "'JetBrains Mono', monospace",
+  },
 ];
 
 export const COLOR_PRESETS = [
   { id: "royal-blue", name: "Royal Blue", hex: "#2563eb", bgTint: "#eff6ff" },
   { id: "emerald-pro", name: "Emerald Pro", hex: "#059669", bgTint: "#ecfdf5" },
-  { id: "midnight-slate", name: "Midnight Slate", hex: "#334155", bgTint: "#f1f5f9" },
-  { id: "crimson-ruby", name: "Crimson Ruby", hex: "#dc2626", bgTint: "#fef2f2" },
-  { id: "violet-indigo", name: "Violet Indigo", hex: "#7c3aed", bgTint: "#f5f3ff" },
-  { id: "amber-bronze", name: "Amber Bronze", hex: "#d97706", bgTint: "#fffbeb" },
+  {
+    id: "midnight-slate",
+    name: "Midnight Slate",
+    hex: "#334155",
+    bgTint: "#f1f5f9",
+  },
+  {
+    id: "crimson-ruby",
+    name: "Crimson Ruby",
+    hex: "#dc2626",
+    bgTint: "#fef2f2",
+  },
+  {
+    id: "violet-indigo",
+    name: "Violet Indigo",
+    hex: "#7c3aed",
+    bgTint: "#f5f3ff",
+  },
+  {
+    id: "amber-bronze",
+    name: "Amber Bronze",
+    hex: "#d97706",
+    bgTint: "#fffbeb",
+  },
   { id: "teal-ocean", name: "Teal Ocean", hex: "#0d9488", bgTint: "#f0fdfa" },
   { id: "dark-onyx", name: "Dark Onyx", hex: "#18181b", bgTint: "#f4f4f5" },
   { id: "rose-quartz", name: "Rose Quartz", hex: "#e11d48", bgTint: "#fff1f2" },
-  { id: "charcoal-classic", name: "Charcoal Classic", hex: "#475569", bgTint: "#f8fafc" },
+  {
+    id: "charcoal-classic",
+    name: "Charcoal Classic",
+    hex: "#475569",
+    bgTint: "#f8fafc",
+  },
 ];
 
 export const FONT_SIZE_OPTIONS = [
@@ -234,47 +279,178 @@ export function copyObject(obj) {
   }
 }
 
-/**
- * Migrates old or partially populated resume data safely into the updated schema
- */
+const isRecord = (value) =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+const text = (value) => (typeof value === "string" ? value : "");
+const stringList = (value) =>
+  Array.isArray(value) ? value.filter((item) => typeof item === "string") : [];
+
+export function createBlankResume() {
+  const blank = copyObject(STARTER_RESUME);
+  blank.personalInfo = Object.fromEntries(
+    Object.keys(blank.personalInfo).map((key) => [
+      key,
+      key === "showPhoto" ? false : "",
+    ]),
+  );
+  blank.summary = "";
+  for (const key of [
+    "experience",
+    "education",
+    "projects",
+    "skills",
+    "certifications",
+    "languages",
+    "customSections",
+  ])
+    blank[key] = [];
+  return blank;
+}
+
+/** Normalize old backups without injecting sample achievements into user data. */
 export function migrateResumeData(raw) {
-  if (!raw || typeof raw !== "object") {
-    return copyObject(STARTER_RESUME);
+  if (!isRecord(raw)) return copyObject(STARTER_RESUME);
+  const base = createBlankResume();
+  const personal = isRecord(raw.personalInfo) ? raw.personalInfo : {};
+  for (const key of Object.keys(base.personalInfo))
+    base.personalInfo[key] =
+      key === "showPhoto" ? personal[key] === true : text(personal[key]);
+  base.summary = text(raw.summary);
+  const fields = {
+    experience: ["company", "position", "location", "startDate", "endDate"],
+    education: [
+      "institution",
+      "degree",
+      "field",
+      "startDate",
+      "endDate",
+      "gpa",
+      "honors",
+    ],
+    projects: ["name", "role", "link", "github", "technologies", "description"],
+    certifications: ["name", "issuer", "date", "link"],
+    languages: ["name", "proficiency"],
+    customSections: ["title"],
+  };
+  for (const [collection, keys] of Object.entries(fields)) {
+    base[collection] = (Array.isArray(raw[collection]) ? raw[collection] : [])
+      .filter(isRecord)
+      .map((item, index) => ({
+        id: collection + "-" + index,
+        ...Object.fromEntries(keys.map((key) => [key, text(item[key])])),
+        ...(collection === "experience"
+          ? {
+              current: item.current === true,
+              responsibilities: stringList(item.responsibilities),
+            }
+          : {}),
+        ...(collection === "customSections"
+          ? { items: stringList(item.items) }
+          : {}),
+      }));
   }
-
-  const base = copyObject(STARTER_RESUME);
-  const personalInfo = {
-    ...base.personalInfo,
-    ...(raw.personalInfo || {}),
-  };
-
-  const customization = {
-    ...base.customization,
-    ...(raw.customization || {}),
-    sectionVisibility: {
-      ...base.customization.sectionVisibility,
-      ...(raw.customization?.sectionVisibility || {}),
-    },
-    sectionOrder: Array.isArray(raw.customization?.sectionOrder) && raw.customization.sectionOrder.length > 0
-      ? raw.customization.sectionOrder
-      : [...DEFAULT_SECTION_ORDER],
-  };
-
-  return {
-    ...base,
-    ...raw,
-    personalInfo,
-    customization,
-    experience: Array.isArray(raw.experience) ? raw.experience : base.experience,
-    education: Array.isArray(raw.education) ? raw.education : base.education,
-    projects: Array.isArray(raw.projects) ? raw.projects : base.projects,
-    skills: Array.isArray(raw.skills)
+  base.skills =
+    typeof raw.skills === "string"
       ? raw.skills
-      : typeof raw.skills === "string"
-      ? raw.skills.split(",").map((s) => s.trim()).filter(Boolean)
-      : base.skills,
-    certifications: Array.isArray(raw.certifications) ? raw.certifications : base.certifications,
-    languages: Array.isArray(raw.languages) ? raw.languages : base.languages,
-    customSections: Array.isArray(raw.customSections) ? raw.customSections : base.customSections,
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : stringList(raw.skills);
+  const custom = isRecord(raw.customization) ? raw.customization : {};
+  const choices = {
+    fontFamily: FONT_OPTIONS,
+    fontSize: FONT_SIZE_OPTIONS,
+    lineSpacing: LINE_SPACING_OPTIONS,
+    margins: PAGE_MARGIN_OPTIONS,
+    bulletStyle: BULLET_STYLES,
+    headerStyle: HEADER_STYLES,
+    headingStyle: HEADING_STYLES,
   };
+  for (const [key, options] of Object.entries(choices))
+    if (options.some((option) => option.id === custom[key]))
+      base.customization[key] = custom[key];
+  if (
+    [
+      "modern",
+      "minimalist",
+      "sidebar",
+      "executive",
+      "creative",
+      "developer",
+      "academic",
+      "nordic",
+    ].includes(custom.template)
+  )
+    base.customization.template = custom.template;
+  if (/^#[0-9a-f]{6}$/i.test(custom.color))
+    base.customization.color = custom.color;
+  const order = Array.isArray(custom.sectionOrder)
+    ? custom.sectionOrder.filter((key) => DEFAULT_SECTION_ORDER.includes(key))
+    : [];
+  base.customization.sectionOrder = [
+    ...new Set([...order, ...DEFAULT_SECTION_ORDER]),
+  ];
+  for (const key of DEFAULT_SECTION_ORDER)
+    base.customization.sectionVisibility[key] =
+      custom.sectionVisibility?.[key] !== false;
+  return base;
+}
+
+export function parseResumeBackup(contents) {
+  const raw = JSON.parse(contents);
+  if (!isRecord(raw) || !isRecord(raw.personalInfo))
+    throw new Error(
+      "Choose a ResumeForge JSON backup containing personal information.",
+    );
+  return migrateResumeData(raw);
+}
+
+export function getResumeChecks(data) {
+  return [
+    {
+      tab: "personal",
+      label: "Add your name",
+      done:
+        !!data.personalInfo.firstName.trim() &&
+        !!data.personalInfo.lastName.trim(),
+    },
+    {
+      tab: "personal",
+      label: "Add a valid email",
+      done: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.personalInfo.email),
+    },
+    {
+      tab: "personal",
+      label: "Add your professional title",
+      done: !!data.personalInfo.title.trim(),
+    },
+    {
+      tab: "summary",
+      label: "Write your summary",
+      done: !!data.summary.trim(),
+    },
+    {
+      tab: "experience",
+      label: "Add a role or a project",
+      done:
+        data.experience.some(
+          (item) => item.company.trim() && item.position.trim(),
+        ) ||
+        data.projects.some(
+          (item) => item.name.trim() && item.description.trim(),
+        ),
+    },
+    {
+      tab: "education",
+      label: "Add your education",
+      done: data.education.some(
+        (item) => item.institution.trim() && item.degree.trim(),
+      ),
+    },
+    {
+      tab: "skills",
+      label: "Add your key skills",
+      done: data.skills.some((skill) => skill.trim()),
+    },
+  ];
 }

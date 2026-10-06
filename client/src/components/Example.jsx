@@ -13,6 +13,66 @@ import {
   MousePointer,
 } from "lucide-react";
 
+const steps = [
+  {
+    id: "personal",
+    title: "Personal Info",
+    icon: <User className="w-5 h-5" />,
+    color: "from-primary-500 to-primary-600",
+    bgColor: "bg-primary-50",
+    data: {
+      name: "Sarah Johnson",
+      title: "Frontend Developer",
+      email: "sarah.johnson@email.com",
+      phone: "+1 (555) 123-4567",
+      location: "San Francisco, CA",
+    },
+  },
+  {
+    id: "experience",
+    title: "Work Experience",
+    icon: <Briefcase className="w-5 h-5" />,
+    color: "from-green-500 to-green-600",
+    bgColor: "bg-green-50",
+    data: {
+      experience:
+        "Frontend Developer at TechCorp (2022-2024)\nLed development of responsive web applications using React and TypeScript. Improved page load times by 40% and increased user engagement by 25%.",
+    },
+  },
+  {
+    id: "education",
+    title: "Education",
+    icon: <GraduationCap className="w-5 h-5" />,
+    color: "from-purple-500 to-purple-600",
+    bgColor: "bg-purple-50",
+    data: {
+      education:
+        "B.S. Computer Science\nStanford University (2018-2022)\nGPA: 3.8/4.0",
+    },
+  },
+  {
+    id: "skills",
+    title: "Skills",
+    icon: <Code className="w-5 h-5" />,
+    color: "from-orange-500 to-orange-600",
+    bgColor: "bg-orange-50",
+    data: {
+      skills: ["React", "TypeScript", "Node.js", "Python", "AWS", "MongoDB"],
+    },
+  },
+  {
+    id: "summary",
+    title: "Summary",
+    icon: <FileText className="w-5 h-5" />,
+    color: "from-indigo-500 to-indigo-600",
+    bgColor: "bg-indigo-50",
+    data: {
+      summary:
+        "Passionate Frontend Developer with 3+ years of experience building scalable web applications. Expertise in React ecosystem and modern JavaScript frameworks.",
+    },
+  },
+];
+
 const ResumeBuildingDemo = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -29,66 +89,6 @@ const ResumeBuildingDemo = () => {
     skills: [],
     summary: "",
   });
-
-  const steps = [
-    {
-      id: "personal",
-      title: "Personal Info",
-      icon: <User className="w-5 h-5" />,
-      color: "from-primary-500 to-primary-600",
-      bgColor: "bg-primary-50",
-      data: {
-        name: "Sarah Johnson",
-        title: "Frontend Developer",
-        email: "sarah.johnson@email.com",
-        phone: "+1 (555) 123-4567",
-        location: "San Francisco, CA",
-      },
-    },
-    {
-      id: "experience",
-      title: "Work Experience",
-      icon: <Briefcase className="w-5 h-5" />,
-      color: "from-green-500 to-green-600",
-      bgColor: "bg-green-50",
-      data: {
-        experience:
-          "Frontend Developer at TechCorp (2022-2024)\nLed development of responsive web applications using React and TypeScript. Improved page load times by 40% and increased user engagement by 25%.",
-      },
-    },
-    {
-      id: "education",
-      title: "Education",
-      icon: <GraduationCap className="w-5 h-5" />,
-      color: "from-purple-500 to-purple-600",
-      bgColor: "bg-purple-50",
-      data: {
-        education:
-          "B.S. Computer Science\nStanford University (2018-2022)\nGPA: 3.8/4.0",
-      },
-    },
-    {
-      id: "skills",
-      title: "Skills",
-      icon: <Code className="w-5 h-5" />,
-      color: "from-orange-500 to-orange-600",
-      bgColor: "bg-orange-50",
-      data: {
-        skills: ["React", "TypeScript", "Node.js", "Python", "AWS", "MongoDB"],
-      },
-    },
-    {
-      id: "summary",
-      title: "Summary",
-      icon: <FileText className="w-5 h-5" />,
-      color: "from-indigo-500 to-indigo-600",
-      bgColor: "bg-indigo-50",
-      data: {
-        summary:
-          "Passionate Frontend Developer with 3+ years of experience building scalable web applications. Expertise in React ecosystem and modern JavaScript frameworks.",
-      },
-    },
-  ];
 
   useEffect(() => {
     let interval;
@@ -361,8 +361,8 @@ const ResumeBuildingDemo = () => {
                   currentStep === index
                     ? `active ${step.bgColor} border-gray-300`
                     : completedSteps.includes(index)
-                    ? "border-green-200 bg-green-50"
-                    : "border-gray-200 hover:border-gray-300"
+                      ? "border-green-200 bg-green-50"
+                      : "border-gray-200 hover:border-gray-300"
                 }`}
                 onClick={() => handleStepClick(index)}
               >
@@ -372,8 +372,8 @@ const ResumeBuildingDemo = () => {
                       currentStep === index
                         ? `bg-gradient-to-r ${step.color} text-white shadow-lg`
                         : completedSteps.includes(index)
-                        ? "bg-green-500 text-white"
-                        : "bg-gray-100 text-gray-600"
+                          ? "bg-green-500 text-white"
+                          : "bg-gray-100 text-gray-600"
                     }`}
                   >
                     {completedSteps.includes(index) && currentStep !== index ? (

@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
+  Undo2,
+  Redo2,
   Check,
   Download,
   Eye,
@@ -21,23 +23,38 @@ import {
   Loader2,
   Image as ImageIcon,
 } from "lucide-react";
-import ResumeTemplate from "../components/ResumeTemplate";
+import ResumePdfPreview from "../components/ResumePdfPreview";
+import useResumeHistory from "../hooks/useResumeHistory";
 import CustomizationPanel from "../components/CustomizationPanel";
 import TemplateGalleryModal from "../components/TemplateGalleryModal";
-import { exportResumeToPdf } from "../utils/exportPdf";
+import { exportResumeToPdf, generateResumePdf } from "../utils/exportPdf";
 import {
   STARTER_RESUME,
   migrateResumeData,
   copyObject,
+  createBlankResume,
+  parseResumeBackup,
+  getResumeChecks,
 } from "../utils/resumeDefaults";
 import { TEMPLATES_REGISTRY, getTemplateById } from "../templates/index";
 
-function Field({ label, value, onChange, type = "text", placeholder = "", helper = "" }) {
+function Field({
+  label,
+  value,
+  onChange,
+  type = "text",
+  placeholder = "",
+  helper = "",
+}) {
   return (
     <label className="builder-field">
       <div className="flex justify-between">
         <span>{label}</span>
-        {helper && <span className="text-[10px] text-gray-400 font-normal">{helper}</span>}
+        {helper && (
+          <span className="text-[10px] text-gray-400 font-normal">
+            {helper}
+          </span>
+        )}
       </div>
       <input
         type={type}
@@ -50,17 +67,21 @@ function Field({ label, value, onChange, type = "text", placeholder = "", helper
 }
 
 export default function ResumeBuilder() {
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const fileInputRef = useRef(null);
+  const paperWrapRef = useRef(null);
+  const paperRef = useRef(null);
 
   // Initialize data with safe migration
-  const [data, setData] = useState(() => {
+  const [data, setData, history] = useResumeHistory(() => {
     try {
       const saved = JSON.parse(localStorage.getItem("resume-builder-data"));
       const migrated = migrateResumeData(saved);
       const queryTemp = params.get("template");
       if (queryTemp) {
-        migrated.customization.template = queryTemp.toLowerCase();
+        const selected = getTemplateById(queryTemp);
+        migrated.customization.template = selected.id;
+        migrated.customization.color = selected.defaultColor;
       }
       return migrated;
     } catch {
@@ -68,53 +89,54 @@ export default function ResumeBuilder() {
     }
   });
 
-  const [activeTab, setActiveTab] = useState("design");
+  const [activeTab, setActiveTab] = useState("personal");
   const [previewMode, setPreviewMode] = useState(false);
   const [savedNotice, setSavedNotice] = useState(false);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(null);
+  const [fitScale, setFitScale] = useState(0.75);
+  const [paperHeight, setPaperHeight] = useState(1123);
+  const [saveError, setSaveError] = useState("");
+  const [notice, setNotice] = useState("");
+  const actualZoom = zoom ?? fitScale;
   const [isExporting, setIsExporting] = useState(false);
+  const [pdfStatus, setPdfStatus] = useState({ busy: true, pageCount: 0 });
 
   // Persist to local storage
   useEffect(() => {
     try {
       localStorage.setItem("resume-builder-data", JSON.stringify(data));
+      setSaveError("");
     } catch (e) {
+      setSaveError(
+        "Browser storage is unavailable or full. Download a JSON backup to keep your changes.",
+      );
       console.error("Failed to save resume locally:", e);
     }
   }, [data]);
 
-  // Handle URL query parameter template change
   useEffect(() => {
-    const q = params.get("template");
-    if (q) {
-      const matched = getTemplateById(q);
-      setData((prev) => ({
-        ...prev,
-        customization: {
-          ...prev.customization,
-          template: matched.id,
-          color: prev.customization.color || matched.defaultColor,
-        },
-      }));
-    }
-  }, [params]);
-
-  // Completion calculation
-  const complete = useMemo(() => {
-    const checks = [
-      data.personalInfo.firstName,
-      data.personalInfo.lastName,
-      data.personalInfo.email,
-      data.personalInfo.title,
-      data.summary,
-      data.experience.length,
-      data.education.length,
-      data.skills.length,
-      data.projects.length,
-    ];
-    return Math.round((checks.filter(Boolean).length / checks.length) * 100);
-  }, [data]);
+    const wrap = paperWrapRef.current;
+    const paper = paperRef.current;
+    const observer = new ResizeObserver(() => {
+      if (wrap?.clientWidth)
+        setFitScale(Math.min(1, Math.max(0.2, (wrap.clientWidth - 48) / 794)));
+      if (paper) setPaperHeight(paper.offsetHeight);
+    });
+    if (wrap) observer.observe(wrap);
+    if (paper) observer.observe(paper);
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(""), 4500);
+    return () => clearTimeout(timer);
+  }, [notice]);
+  const checks = useMemo(() => getResumeChecks(data), [data]);
+  const complete = Math.round(
+    (checks.filter((check) => check.done).length / checks.length) * 100,
+  );
+  const nextCheck = checks.find((check) => !check.done);
 
   // State mutations
   const updatePersonalInfo = (key, value) => {
@@ -135,7 +157,7 @@ export default function ResumeBuilder() {
     setData((d) => ({
       ...d,
       [collection]: (d[collection] || []).map((item) =>
-        item.id === id ? { ...item, [key]: value } : item
+        item.id === id ? { ...item, [key]: value } : item,
       ),
     }));
   };
@@ -143,7 +165,10 @@ export default function ResumeBuilder() {
   const addItem = (collection, item) => {
     setData((d) => ({
       ...d,
-      [collection]: [...(d[collection] || []), { id: Date.now(), ...item }],
+      [collection]: [
+        ...(d[collection] || []),
+        { id: crypto.randomUUID(), ...item },
+      ],
     }));
   };
 
@@ -155,33 +180,52 @@ export default function ResumeBuilder() {
   };
 
   const handleSave = () => {
-    localStorage.setItem("resume-builder-data", JSON.stringify(data));
-    setSavedNotice(true);
-    setTimeout(() => setSavedNotice(false), 2200);
+    try {
+      localStorage.setItem("resume-builder-data", JSON.stringify(data));
+      setSaveError("");
+      setSavedNotice(true);
+      setNotice("Your resume is saved in this browser.");
+    } catch {
+      setSaveError(
+        "Could not save your draft. Export a JSON backup to keep your changes.",
+      );
+    }
   };
 
-  const handlePrint = () => {
-    const firstName = data.personalInfo.firstName || "Resume";
-    const lastName = data.personalInfo.lastName || "";
-    document.title = `${firstName}_${lastName}_CV`;
-    window.print();
+  const handlePrint = async () => {
+    const tab = window.open("about:blank", "_blank");
+    if (!tab) {
+      setNotice("Allow pop-ups to open the PDF, or use Download PDF.");
+      return;
+    }
+    tab.opener = null;
+    try {
+      const { blob } = await generateResumePdf(data);
+      const url = URL.createObjectURL(blob);
+      tab.location.href = url;
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (err) {
+      tab.close();
+      setNotice(err.message || "Could not open the PDF. Please try again.");
+    }
   };
-
   const handleDirectDownloadPdf = async () => {
     try {
       setIsExporting(true);
-      const firstName = data.personalInfo.firstName || "My";
-      const lastName = data.personalInfo.lastName || "Resume";
-      const filename = `${firstName}_${lastName}_CV.pdf`;
-      const paperElement = document.getElementById("resume-paper-canvas");
-      if (!paperElement) {
-        window.print();
-        return;
-      }
-      await exportResumeToPdf(paperElement, filename);
+      const filename =
+        (data.personalInfo.firstName || "My") +
+        "_" +
+        (data.personalInfo.lastName || "Resume") +
+        "_CV.pdf";
+      const result = await exportResumeToPdf(data, filename);
+      setNotice(
+        result.pageCount + "-page PDF created. Check your browser downloads.",
+      );
     } catch (err) {
-      console.error("Direct PDF export failed, falling back to print:", err);
-      handlePrint();
+      setNotice(
+        err.message ||
+          "PDF export failed. Your draft is safe; please try again.",
+      );
     } finally {
       setIsExporting(false);
     }
@@ -203,15 +247,22 @@ export default function ResumeBuilder() {
   const handleImportJSON = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setNotice("Choose a JSON backup smaller than 2 MB.");
+      e.target.value = "";
+      return;
+    }
     const reader = new FileReader();
+    reader.onerror = () =>
+      setNotice("The file could not be read. Please try again.");
     reader.onload = (event) => {
       try {
-        const parsed = JSON.parse(event.target.result);
-        const migrated = migrateResumeData(parsed);
+        const migrated = parseResumeBackup(event.target.result);
         setData(migrated);
-        handleSave();
+        setParams({}, { replace: true });
+        setNotice("Backup imported. Your resume is ready to edit.");
       } catch (err) {
-        alert("Invalid JSON file format.");
+        setNotice(err.message || "This is not a valid resume backup.");
       }
     };
     reader.readAsText(file);
@@ -220,26 +271,21 @@ export default function ResumeBuilder() {
 
   // Reset to starter data
   const handleResetStarter = () => {
-    if (window.confirm("Reset all resume data to sample template data? Any unsaved edits will be replaced.")) {
+    if (
+      window.confirm(
+        "Reset all resume data to sample template data? Your current draft will be replaced. Export a backup first if you want to keep it.",
+      )
+    ) {
       setData(copyObject(STARTER_RESUME));
     }
   };
 
   // Clear data
   const handleClearAll = () => {
-    if (window.confirm("Clear all resume fields to start from a blank canvas?")) {
-      setData({
-        ...copyObject(STARTER_RESUME),
-        personalInfo: { firstName: "", lastName: "", title: "", email: "", phone: "", location: "", linkedin: "", website: "", github: "", photoUrl: "", showPhoto: false },
-        summary: "",
-        experience: [],
-        education: [],
-        projects: [],
-        skills: [],
-        certifications: [],
-        languages: [],
-        customSections: [],
-      });
+    if (
+      window.confirm("Clear all resume fields to start from a blank canvas?")
+    ) {
+      setData({ ...createBlankResume(), customization: data.customization });
     }
   };
 
@@ -266,15 +312,57 @@ export default function ResumeBuilder() {
           </div>
 
           <div className="form-grid">
-            <Field label="First Name" value={data.personalInfo.firstName} onChange={(v) => updatePersonalInfo("firstName", v)} />
-            <Field label="Last Name" value={data.personalInfo.lastName} onChange={(v) => updatePersonalInfo("lastName", v)} />
-            <Field label="Professional Title" value={data.personalInfo.title} onChange={(v) => updatePersonalInfo("title", v)} placeholder="e.g. Senior Frontend Engineer" />
-            <Field label="Email" type="email" value={data.personalInfo.email} onChange={(v) => updatePersonalInfo("email", v)} />
-            <Field label="Phone" value={data.personalInfo.phone} onChange={(v) => updatePersonalInfo("phone", v)} />
-            <Field label="Location" value={data.personalInfo.location} onChange={(v) => updatePersonalInfo("location", v)} placeholder="e.g. San Francisco, CA" />
-            <Field label="LinkedIn" value={data.personalInfo.linkedin} onChange={(v) => updatePersonalInfo("linkedin", v)} placeholder="linkedin.com/in/username" />
-            <Field label="Website / Portfolio" value={data.personalInfo.website} onChange={(v) => updatePersonalInfo("website", v)} placeholder="yoursite.dev" />
-            <Field label="GitHub" value={data.personalInfo.github} onChange={(v) => updatePersonalInfo("github", v)} placeholder="github.com/username" />
+            <Field
+              label="First Name"
+              value={data.personalInfo.firstName}
+              onChange={(v) => updatePersonalInfo("firstName", v)}
+            />
+            <Field
+              label="Last Name"
+              value={data.personalInfo.lastName}
+              onChange={(v) => updatePersonalInfo("lastName", v)}
+            />
+            <Field
+              label="Professional Title"
+              value={data.personalInfo.title}
+              onChange={(v) => updatePersonalInfo("title", v)}
+              placeholder="e.g. Senior Frontend Engineer"
+            />
+            <Field
+              label="Email"
+              type="email"
+              value={data.personalInfo.email}
+              onChange={(v) => updatePersonalInfo("email", v)}
+            />
+            <Field
+              label="Phone"
+              value={data.personalInfo.phone}
+              onChange={(v) => updatePersonalInfo("phone", v)}
+            />
+            <Field
+              label="Location"
+              value={data.personalInfo.location}
+              onChange={(v) => updatePersonalInfo("location", v)}
+              placeholder="e.g. San Francisco, CA"
+            />
+            <Field
+              label="LinkedIn"
+              value={data.personalInfo.linkedin}
+              onChange={(v) => updatePersonalInfo("linkedin", v)}
+              placeholder="linkedin.com/in/username"
+            />
+            <Field
+              label="Website / Portfolio"
+              value={data.personalInfo.website}
+              onChange={(v) => updatePersonalInfo("website", v)}
+              placeholder="yoursite.dev"
+            />
+            <Field
+              label="GitHub"
+              value={data.personalInfo.github}
+              onChange={(v) => updatePersonalInfo("github", v)}
+              placeholder="github.com/username"
+            />
           </div>
 
           <div className="p-3.5 rounded-xl border border-gray-200 bg-gray-50/50 mt-4 space-y-3">
@@ -282,9 +370,13 @@ export default function ResumeBuilder() {
               <input
                 type="checkbox"
                 checked={!!data.personalInfo.showPhoto}
-                onChange={(e) => updatePersonalInfo("showPhoto", e.target.checked)}
+                onChange={(e) =>
+                  updatePersonalInfo("showPhoto", e.target.checked)
+                }
               />
-              <span className="font-semibold text-gray-800 text-xs">Include Profile Photo / Headshot</span>
+              <span className="font-semibold text-gray-800 text-xs">
+                Include Profile Photo / Headshot
+              </span>
             </label>
 
             {data.personalInfo.showPhoto && (
@@ -307,16 +399,20 @@ export default function ResumeBuilder() {
           <p className="eyebrow">02 / Elevator Pitch</p>
           <h2>Professional Summary</h2>
           <p className="helper">
-            Write a high-impact 2–4 sentence summary highlighting your core strengths, experience level, and key accomplishments.
+            Write a high-impact 2–4 sentence summary highlighting your core
+            strengths, experience level, and key accomplishments.
           </p>
           <textarea
             className="summary-input"
+            aria-label="Professional summary"
             value={data.summary}
             onChange={(e) => setData({ ...data, summary: e.target.value })}
             maxLength={900}
             rows={6}
           />
-          <div className="char-count">{data.summary.length} / 900 characters</div>
+          <div className="char-count">
+            {data.summary.length} / 900 characters
+          </div>
         </section>
       );
     }
@@ -349,31 +445,83 @@ export default function ResumeBuilder() {
 
           {data.experience.map((exp) => (
             <div className="repeat-card" key={exp.id}>
-              <button className="delete-btn" onClick={() => removeItem("experience", exp.id)}>
+              <button
+                className="delete-btn"
+                aria-label="Remove entry"
+                onClick={() => removeItem("experience", exp.id)}
+              >
                 <Trash2 size={15} />
               </button>
               <div className="form-grid">
-                <Field label="Job Title" value={exp.position} onChange={(v) => updateItem("experience", exp.id, "position", v)} />
-                <Field label="Company" value={exp.company} onChange={(v) => updateItem("experience", exp.id, "company", v)} />
-                <Field label="Location" value={exp.location} onChange={(v) => updateItem("experience", exp.id, "location", v)} />
-                <Field label="Start Date" type="month" value={exp.startDate} onChange={(v) => updateItem("experience", exp.id, "startDate", v)} />
-                <Field label="End Date" type="month" value={exp.endDate} onChange={(v) => updateItem("experience", exp.id, "endDate", v)} />
+                <Field
+                  label="Job Title"
+                  value={exp.position}
+                  onChange={(v) =>
+                    updateItem("experience", exp.id, "position", v)
+                  }
+                />
+                <Field
+                  label="Company"
+                  value={exp.company}
+                  onChange={(v) =>
+                    updateItem("experience", exp.id, "company", v)
+                  }
+                />
+                <Field
+                  label="Location"
+                  value={exp.location}
+                  onChange={(v) =>
+                    updateItem("experience", exp.id, "location", v)
+                  }
+                />
+                <Field
+                  label="Start Date"
+                  type="month"
+                  value={exp.startDate}
+                  onChange={(v) =>
+                    updateItem("experience", exp.id, "startDate", v)
+                  }
+                />
+                <Field
+                  label="End Date"
+                  type="month"
+                  value={exp.endDate}
+                  onChange={(v) =>
+                    updateItem("experience", exp.id, "endDate", v)
+                  }
+                />
               </div>
 
               <label className="check-field">
                 <input
                   type="checkbox"
                   checked={exp.current}
-                  onChange={(e) => updateItem("experience", exp.id, "current", e.target.checked)}
+                  onChange={(e) =>
+                    updateItem(
+                      "experience",
+                      exp.id,
+                      "current",
+                      e.target.checked,
+                    )
+                  }
                 />
                 I currently work in this role
               </label>
 
               <label className="builder-field">
-                <span>Key Accomplishments & Responsibilities (One bullet per line)</span>
+                <span>
+                  Key Accomplishments & Responsibilities (One bullet per line)
+                </span>
                 <textarea
                   value={(exp.responsibilities || []).join("\n")}
-                  onChange={(e) => updateItem("experience", exp.id, "responsibilities", e.target.value.split("\n"))}
+                  onChange={(e) =>
+                    updateItem(
+                      "experience",
+                      exp.id,
+                      "responsibilities",
+                      e.target.value.split("\n"),
+                    )
+                  }
                   rows={4}
                   placeholder="• Spearheaded design and implementation...&#10;• Reduced latency by 35%...&#10;• Mentored a team of 4..."
                 />
@@ -412,19 +560,63 @@ export default function ResumeBuilder() {
 
           {data.education.map((edu) => (
             <div className="repeat-card" key={edu.id}>
-              <button className="delete-btn" onClick={() => removeItem("education", edu.id)}>
+              <button
+                className="delete-btn"
+                aria-label="Remove entry"
+                onClick={() => removeItem("education", edu.id)}
+              >
                 <Trash2 size={15} />
               </button>
               <div className="form-grid">
-                <Field label="Institution / University" value={edu.institution} onChange={(v) => updateItem("education", edu.id, "institution", v)} />
-                <Field label="Degree" value={edu.degree} onChange={(v) => updateItem("education", edu.id, "degree", v)} placeholder="e.g. B.S., B.A., M.S." />
-                <Field label="Field of Study" value={edu.field} onChange={(v) => updateItem("education", edu.id, "field", v)} placeholder="Computer Science" />
-                <Field label="GPA (Optional)" value={edu.gpa} onChange={(v) => updateItem("education", edu.id, "gpa", v)} placeholder="3.9 / 4.0" />
-                <Field label="Start Date" type="month" value={edu.startDate} onChange={(v) => updateItem("education", edu.id, "startDate", v)} />
-                <Field label="End Date / Expected" type="month" value={edu.endDate} onChange={(v) => updateItem("education", edu.id, "endDate", v)} />
+                <Field
+                  label="Institution / University"
+                  value={edu.institution}
+                  onChange={(v) =>
+                    updateItem("education", edu.id, "institution", v)
+                  }
+                />
+                <Field
+                  label="Degree"
+                  value={edu.degree}
+                  onChange={(v) => updateItem("education", edu.id, "degree", v)}
+                  placeholder="e.g. B.S., B.A., M.S."
+                />
+                <Field
+                  label="Field of Study"
+                  value={edu.field}
+                  onChange={(v) => updateItem("education", edu.id, "field", v)}
+                  placeholder="Computer Science"
+                />
+                <Field
+                  label="GPA (Optional)"
+                  value={edu.gpa}
+                  onChange={(v) => updateItem("education", edu.id, "gpa", v)}
+                  placeholder="3.9 / 4.0"
+                />
+                <Field
+                  label="Start Date"
+                  type="month"
+                  value={edu.startDate}
+                  onChange={(v) =>
+                    updateItem("education", edu.id, "startDate", v)
+                  }
+                />
+                <Field
+                  label="End Date / Expected"
+                  type="month"
+                  value={edu.endDate}
+                  onChange={(v) =>
+                    updateItem("education", edu.id, "endDate", v)
+                  }
+                />
               </div>
               <div className="mt-3">
-                <Field label="Honors / Awards / Activities (Optional)" value={edu.honors} onChange={(v) => updateItem("education", edu.id, "honors", v)} placeholder="Dean's List, Cum Laude, President of ACM" />
+                <Field
+                  label="Honors / Awards / Activities (Optional)"
+                  value={edu.honors}
+                  onChange={(v) => updateItem("education", edu.id, "honors", v)}
+                  placeholder="Dean's List, Cum Laude, President of ACM"
+                />
               </div>
             </div>
           ))}
@@ -459,22 +651,59 @@ export default function ResumeBuilder() {
 
           {data.projects.map((proj) => (
             <div className="repeat-card" key={proj.id}>
-              <button className="delete-btn" onClick={() => removeItem("projects", proj.id)}>
+              <button
+                className="delete-btn"
+                aria-label="Remove entry"
+                onClick={() => removeItem("projects", proj.id)}
+              >
                 <Trash2 size={15} />
               </button>
               <div className="form-grid">
-                <Field label="Project Name" value={proj.name} onChange={(v) => updateItem("projects", proj.id, "name", v)} />
-                <Field label="Your Role" value={proj.role} onChange={(v) => updateItem("projects", proj.id, "role", v)} placeholder="Lead Creator, Full Stack Dev" />
-                <Field label="Technologies Used" value={proj.technologies} onChange={(v) => updateItem("projects", proj.id, "technologies", v)} placeholder="React, Node.js, Tailwind, Docker" />
-                <Field label="Live Demo URL (Optional)" value={proj.link} onChange={(v) => updateItem("projects", proj.id, "link", v)} placeholder="https://myproject.com" />
-                <Field label="GitHub Repository (Optional)" value={proj.github} onChange={(v) => updateItem("projects", proj.id, "github", v)} placeholder="github.com/user/project" />
+                <Field
+                  label="Project Name"
+                  value={proj.name}
+                  onChange={(v) => updateItem("projects", proj.id, "name", v)}
+                />
+                <Field
+                  label="Your Role"
+                  value={proj.role}
+                  onChange={(v) => updateItem("projects", proj.id, "role", v)}
+                  placeholder="Lead Creator, Full Stack Dev"
+                />
+                <Field
+                  label="Technologies Used"
+                  value={proj.technologies}
+                  onChange={(v) =>
+                    updateItem("projects", proj.id, "technologies", v)
+                  }
+                  placeholder="React, Node.js, Tailwind, Docker"
+                />
+                <Field
+                  label="Live Demo URL (Optional)"
+                  value={proj.link}
+                  onChange={(v) => updateItem("projects", proj.id, "link", v)}
+                  placeholder="https://myproject.com"
+                />
+                <Field
+                  label="GitHub Repository (Optional)"
+                  value={proj.github}
+                  onChange={(v) => updateItem("projects", proj.id, "github", v)}
+                  placeholder="github.com/user/project"
+                />
               </div>
               <div className="mt-3">
                 <label className="builder-field">
                   <span>Project Description & Impact</span>
                   <textarea
                     value={proj.description}
-                    onChange={(e) => updateItem("projects", proj.id, "description", e.target.value)}
+                    onChange={(e) =>
+                      updateItem(
+                        "projects",
+                        proj.id,
+                        "description",
+                        e.target.value,
+                      )
+                    }
                     rows={2}
                     placeholder="Describe the problem, your architecture, and key outcomes..."
                   />
@@ -491,7 +720,10 @@ export default function ResumeBuilder() {
         <section>
           <p className="eyebrow">06 / Toolkit</p>
           <h2>Skills & Competencies</h2>
-          <p className="helper">Separate skills with commas. Group relevant tools, languages, and technical frameworks.</p>
+          <p className="helper">
+            Separate skills with commas. Group relevant tools, languages, and
+            technical frameworks.
+          </p>
           <textarea
             className="summary-input skills-input"
             value={data.skills.join(", ")}
@@ -509,7 +741,10 @@ export default function ResumeBuilder() {
           />
           <div className="flex flex-wrap gap-1.5 mt-3">
             {data.skills.map((skill, i) => (
-              <span key={i} className="text-xs px-2.5 py-1 rounded-md bg-gray-100 border border-gray-200 text-gray-800 font-medium">
+              <span
+                key={i}
+                className="text-xs px-2.5 py-1 rounded-md bg-gray-100 border border-gray-200 text-gray-800 font-medium"
+              >
                 {skill}
               </span>
             ))}
@@ -526,19 +761,47 @@ export default function ResumeBuilder() {
               <p className="eyebrow">07 / Credentials</p>
               <h2>Certifications & Licensures</h2>
             </div>
-            <button className="add-btn" onClick={() => addItem("certifications", { name: "", issuer: "", date: "" })}>
+            <button
+              className="add-btn"
+              onClick={() =>
+                addItem("certifications", { name: "", issuer: "", date: "" })
+              }
+            >
               <Plus size={16} /> Add
             </button>
           </div>
           {data.certifications.map((cert) => (
             <div className="repeat-card" key={cert.id}>
-              <button className="delete-btn" onClick={() => removeItem("certifications", cert.id)}>
+              <button
+                className="delete-btn"
+                aria-label="Remove entry"
+                onClick={() => removeItem("certifications", cert.id)}
+              >
                 <Trash2 size={15} />
               </button>
               <div className="form-grid">
-                <Field label="Certification Name" value={cert.name} onChange={(v) => updateItem("certifications", cert.id, "name", v)} />
-                <Field label="Issuing Organization" value={cert.issuer} onChange={(v) => updateItem("certifications", cert.id, "issuer", v)} />
-                <Field label="Issue Date" type="month" value={cert.date} onChange={(v) => updateItem("certifications", cert.id, "date", v)} />
+                <Field
+                  label="Certification Name"
+                  value={cert.name}
+                  onChange={(v) =>
+                    updateItem("certifications", cert.id, "name", v)
+                  }
+                />
+                <Field
+                  label="Issuing Organization"
+                  value={cert.issuer}
+                  onChange={(v) =>
+                    updateItem("certifications", cert.id, "issuer", v)
+                  }
+                />
+                <Field
+                  label="Issue Date"
+                  type="month"
+                  value={cert.date}
+                  onChange={(v) =>
+                    updateItem("certifications", cert.id, "date", v)
+                  }
+                />
               </div>
             </div>
           ))}
@@ -554,30 +817,64 @@ export default function ResumeBuilder() {
               <p className="eyebrow">08 / Communication</p>
               <h2>Languages</h2>
             </div>
-            <button className="add-btn" onClick={() => addItem("languages", { name: "", proficiency: "Professional working" })}>
+            <button
+              className="add-btn"
+              onClick={() =>
+                addItem("languages", {
+                  name: "",
+                  proficiency: "Professional working",
+                })
+              }
+            >
               <Plus size={16} /> Add Language
             </button>
           </div>
 
           {data.languages.map((lang) => (
             <div className="repeat-card" key={lang.id}>
-              <button className="delete-btn" onClick={() => removeItem("languages", lang.id)}>
+              <button
+                className="delete-btn"
+                aria-label="Remove entry"
+                onClick={() => removeItem("languages", lang.id)}
+              >
                 <Trash2 size={15} />
               </button>
               <div className="form-grid">
-                <Field label="Language" value={lang.name} onChange={(v) => updateItem("languages", lang.id, "name", v)} placeholder="e.g. English, Spanish" />
+                <Field
+                  label="Language"
+                  value={lang.name}
+                  onChange={(v) => updateItem("languages", lang.id, "name", v)}
+                  placeholder="e.g. English, Spanish"
+                />
                 <label className="builder-field">
                   <span>Proficiency Level</span>
                   <select
                     className="border border-gray-300 rounded-md p-2 text-xs bg-white"
                     value={lang.proficiency}
-                    onChange={(e) => updateItem("languages", lang.id, "proficiency", e.target.value)}
+                    onChange={(e) =>
+                      updateItem(
+                        "languages",
+                        lang.id,
+                        "proficiency",
+                        e.target.value,
+                      )
+                    }
                   >
-                    <option value="Native / Bilingual">Native / Bilingual</option>
-                    <option value="Fluent / Full Professional">Fluent / Full Professional</option>
-                    <option value="Professional working">Professional working</option>
-                    <option value="Conversational / Intermediate">Conversational / Intermediate</option>
-                    <option value="Elementary / Basic">Elementary / Basic</option>
+                    <option value="Native / Bilingual">
+                      Native / Bilingual
+                    </option>
+                    <option value="Fluent / Full Professional">
+                      Fluent / Full Professional
+                    </option>
+                    <option value="Professional working">
+                      Professional working
+                    </option>
+                    <option value="Conversational / Intermediate">
+                      Conversational / Intermediate
+                    </option>
+                    <option value="Elementary / Basic">
+                      Elementary / Basic
+                    </option>
                   </select>
                 </label>
               </div>
@@ -595,22 +892,46 @@ export default function ResumeBuilder() {
               <p className="eyebrow">09 / Flexibility</p>
               <h2>Custom Sections</h2>
             </div>
-            <button className="add-btn" onClick={() => addItem("customSections", { title: "Awards & Honors", items: [""] })}>
+            <button
+              className="add-btn"
+              onClick={() =>
+                addItem("customSections", {
+                  title: "Awards & Honors",
+                  items: [""],
+                })
+              }
+            >
               <Plus size={16} /> Add Section
             </button>
           </div>
 
           {data.customSections.map((c) => (
             <div className="repeat-card" key={c.id}>
-              <button className="delete-btn" onClick={() => removeItem("customSections", c.id)}>
+              <button
+                className="delete-btn"
+                aria-label="Remove entry"
+                onClick={() => removeItem("customSections", c.id)}
+              >
                 <Trash2 size={15} />
               </button>
-              <Field label="Section Heading" value={c.title} onChange={(v) => updateItem("customSections", c.id, "title", v)} placeholder="e.g. Volunteer Experience, Publications" />
+              <Field
+                label="Section Heading"
+                value={c.title}
+                onChange={(v) => updateItem("customSections", c.id, "title", v)}
+                placeholder="e.g. Volunteer Experience, Publications"
+              />
               <label className="builder-field mt-3">
                 <span>Section Bullet Items (One per line)</span>
                 <textarea
                   value={(c.items || []).join("\n")}
-                  onChange={(e) => updateItem("customSections", c.id, "items", e.target.value.split("\n"))}
+                  onChange={(e) =>
+                    updateItem(
+                      "customSections",
+                      c.id,
+                      "items",
+                      e.target.value.split("\n"),
+                    )
+                  }
                   rows={3}
                 />
               </label>
@@ -639,7 +960,7 @@ export default function ResumeBuilder() {
   const activeTemplateConfig = getTemplateById(data.customization?.template);
 
   return (
-    <div className="builder-shell">
+    <div className={`builder-shell ${previewMode ? "is-preview" : ""}`}>
       {/* Header */}
       <header className="builder-header no-print">
         <Link to="/" className="brand">
@@ -651,12 +972,34 @@ export default function ResumeBuilder() {
           </span>
         </Link>
 
-        <div className="builder-status">
+        <div className="builder-status" role="status">
           <span className="save-dot" />
-          {savedNotice ? "Saved to browser" : "Auto-saved locally"}
+          {saveError
+            ? "Draft not saved"
+            : savedNotice
+              ? "Saved to browser"
+              : "Saved on this device"}
         </div>
 
         <div className="builder-actions">
+          <button
+            className="ghost-btn history-btn"
+            onClick={history.undo}
+            disabled={!history.canUndo}
+            aria-label="Undo last edit"
+            title="Undo last edit"
+          >
+            <Undo2 size={16} />
+          </button>
+          <button
+            className="ghost-btn history-btn"
+            onClick={history.redo}
+            disabled={!history.canRedo}
+            aria-label="Redo edit"
+            title="Redo edit"
+          >
+            <Redo2 size={16} />
+          </button>
           {/* Hidden JSON file input */}
           <input
             ref={fileInputRef}
@@ -667,34 +1010,49 @@ export default function ResumeBuilder() {
           />
 
           <button
-            className="ghost-btn hidden md:inline-flex"
+            className="ghost-btn backup-action"
             onClick={() => fileInputRef.current?.click()}
             title="Import existing resume JSON"
+            aria-label="Import JSON"
           >
-            <FolderUp size={15} /> Import JSON
+            <FolderUp size={15} /> <span>Import JSON</span>
           </button>
 
           <button
-            className="ghost-btn hidden md:inline-flex"
+            className="ghost-btn backup-action"
             onClick={handleExportJSON}
             title="Download resume JSON backup"
+            aria-label="Export JSON"
           >
-            <FolderDown size={15} /> Export JSON
+            <FolderDown size={15} /> <span>Export JSON</span>
           </button>
 
           <button
             className="ghost-btn"
             onClick={() => setPreviewMode(!previewMode)}
           >
-            <Eye size={16} /> {previewMode ? "Edit Resume" : "Preview Mode"}
+            <Eye size={16} /> {previewMode ? "Edit" : "Preview"}
           </button>
 
           <button className="primary-btn" onClick={handleSave}>
-            <Save size={16} /> Save Resume
+            <Save size={16} /> Save
           </button>
         </div>
       </header>
 
+      {saveError && (
+        <div className="storage-warning no-print" role="alert">
+          {saveError}
+        </div>
+      )}
+      {notice && (
+        <div className="toast no-print" role="status">
+          {notice}
+          <button aria-label="Dismiss message" onClick={() => setNotice("")}>
+            ×
+          </button>
+        </div>
+      )}
       {/* Main Workspace */}
       <main className="builder-main">
         {/* Left Form Editor Panel */}
@@ -719,29 +1077,55 @@ export default function ResumeBuilder() {
                 </button>
               </div>
             </div>
-            <h1>Customize Your Story.</h1>
-            <p>Fine-tune content, typography, styling, and templates in real time.</p>
+            <h1>Make your experience count.</h1>
+            <p>Start with your details. Your preview updates as you go.</p>
+            {data.personalInfo.email === STARTER_RESUME.personalInfo.email && (
+              <p className="sample-hint">
+                You’re viewing sample content. Replace it with your details, or
+                use Clear to start fresh.
+              </p>
+            )}
 
             <div className="progress-line">
               <div style={{ width: `${complete}%` }} />
             </div>
             <div className="flex justify-between items-center text-[11px] text-gray-400">
-              <span>{complete}% completed</span>
-              <span className="font-medium text-orange-600">{activeTemplateConfig.name}</span>
+              <span>{complete}% of essentials filled</span>
+              <span className="font-medium text-orange-600">
+                {activeTemplateConfig.name}
+              </span>
             </div>
           </div>
 
+          <div className="resume-guidance">
+            {nextCheck ? (
+              <button onClick={() => setActiveTab(nextCheck.tab)}>
+                Next step: {nextCheck.label} <Plus size={13} />
+              </button>
+            ) : (
+              <p>
+                <Check size={14} /> Essentials filled. Review your content
+                before applying.
+              </p>
+            )}
+          </div>
           {/* Section Navigation Tabs */}
-          <nav className="section-tabs scrollbar-none">
+          <nav
+            className="section-tabs scrollbar-none"
+            aria-label="Resume sections"
+          >
             {navTabs.map(([id, label, Icon]) => (
               <button
                 key={id}
+                aria-current={activeTab === id ? "step" : undefined}
                 className={activeTab === id ? "active" : ""}
                 onClick={() => setActiveTab(id)}
               >
                 {Icon && <Icon size={14} className="text-orange-500" />}
                 {label}
-                {activeTab === id && <Check size={13} className="ml-1 text-orange-600" />}
+                {activeTab === id && (
+                  <Check size={13} className="ml-1 text-orange-600" />
+                )}
               </button>
             ))}
           </nav>
@@ -751,9 +1135,42 @@ export default function ResumeBuilder() {
         </aside>
 
         {/* Right Preview Panel */}
-        <section className={`preview-panel ${previewMode ? "preview-full" : ""}`}>
+        <section
+          className={`preview-panel ${previewMode ? "preview-full" : ""}`}
+        >
           {/* Preview Toolbar */}
           <div className="preview-toolbar no-print">
+            <button
+              className="ghost-btn compact-action"
+              onClick={() =>
+                updateCustomization({
+                  ...data.customization,
+                  fontSize:
+                    data.customization.fontSize === "compact"
+                      ? "normal"
+                      : "compact",
+                  lineSpacing:
+                    data.customization.fontSize === "compact"
+                      ? "normal"
+                      : "tight",
+                  margins:
+                    data.customization.fontSize === "compact"
+                      ? "balanced"
+                      : "compact",
+                })
+              }
+            >
+              {data.customization.fontSize === "compact"
+                ? "Comfortable layout"
+                : "Compact layout"}
+            </button>
+            <span className="pdf-page-count" role="status">
+              {pdfStatus.busy
+                ? "Updating PDF…"
+                : pdfStatus.error
+                  ? "Check preview"
+                  : `${pdfStatus.pageCount} ${pdfStatus.pageCount === 1 ? "page" : "pages"} · A4`}
+            </span>
             <div className="hidden lg:block">
               <p className="eyebrow">Document Canvas</p>
               <span className="text-xs text-gray-500">A4 Printable Format</span>
@@ -765,34 +1182,36 @@ export default function ResumeBuilder() {
               className="px-3 py-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 text-xs font-semibold flex items-center gap-1.5 shadow-xs transition"
             >
               <Sparkles className="w-3.5 h-3.5 text-orange-500" />
-              <span>Template: <strong>{activeTemplateConfig.name}</strong></span>
+              <span>
+                Template: <strong>{activeTemplateConfig.name}</strong>
+              </span>
             </button>
 
             {/* Zoom Controls */}
             <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
               <button
-                onClick={() => setZoom((z) => Math.max(0.6, Math.round((z - 0.1) * 10) / 10))}
+                onClick={() => setZoom(Math.max(0.25, actualZoom - 0.1))}
                 className="p-1 rounded text-gray-600 hover:bg-white transition"
                 title="Zoom out"
               >
                 <ZoomOut size={14} />
               </button>
               <span className="text-[11px] font-mono text-gray-600 w-11 text-center">
-                {Math.round(zoom * 100)}%
+                {Math.round(actualZoom * 100)}%
               </span>
               <button
-                onClick={() => setZoom((z) => Math.min(1.4, Math.round((z + 0.1) * 10) / 10))}
+                onClick={() => setZoom(Math.min(1.4, actualZoom + 0.1))}
                 className="p-1 rounded text-gray-600 hover:bg-white transition"
                 title="Zoom in"
               >
                 <ZoomIn size={14} />
               </button>
               <button
-                onClick={() => setZoom(1)}
+                onClick={() => setZoom(null)}
                 className="p-1 rounded text-gray-600 hover:bg-white transition text-[10px] font-semibold"
-                title="Reset zoom to 100%"
+                title="Fit resume to screen"
               >
-                100%
+                Fit
               </button>
             </div>
 
@@ -801,7 +1220,7 @@ export default function ResumeBuilder() {
               <button
                 className="download-btn flex items-center gap-1.5 cursor-pointer"
                 onClick={handleDirectDownloadPdf}
-                disabled={isExporting}
+                disabled={isExporting || pdfStatus.busy || pdfStatus.error}
                 title="Directly download high-resolution A4 PDF"
               >
                 {isExporting ? (
@@ -820,30 +1239,34 @@ export default function ResumeBuilder() {
               <button
                 className="ghost-btn flex items-center gap-1.5 cursor-pointer"
                 onClick={handlePrint}
-                title="Print via browser dialog / Save as vector PDF"
+                title="Open the exact PDF in a new tab to print"
               >
                 <Printer size={14} />
-                <span className="hidden sm:inline">Print</span>
+                <span className="hidden sm:inline">Open PDF</span>
               </button>
             </div>
           </div>
 
           {/* Paper Canvas */}
-          <div className="paper-wrap">
+          <div className="paper-wrap" ref={paperWrapRef}>
             <div
-              id="resume-paper-canvas"
-              className="paper transition-transform duration-150"
+              className="paper-size"
               style={{
-                transform: `scale(${zoom})`,
-                transformOrigin: "top center",
+                width: 794 * actualZoom,
+                height: paperHeight * actualZoom,
               }}
             >
-              <ResumeTemplate
-                resumeData={data}
-                customization={data.customization}
-                variant={data.customization.template}
-                colorScheme={data.customization.color}
-              />
+              <div
+                ref={paperRef}
+                id="resume-paper-canvas"
+                className="paper transition-transform duration-150"
+                style={{
+                  transform: `scale(${actualZoom})`,
+                  transformOrigin: "top left",
+                }}
+              >
+                <ResumePdfPreview data={data} onStatus={setPdfStatus} />
+              </div>
             </div>
           </div>
         </section>
@@ -855,6 +1278,7 @@ export default function ResumeBuilder() {
         onClose={() => setIsGalleryOpen(false)}
         selectedTemplate={data.customization.template}
         onSelectTemplate={(templateId, defaultColor) => {
+          setParams({}, { replace: true });
           updateCustomization({
             ...data.customization,
             template: templateId,

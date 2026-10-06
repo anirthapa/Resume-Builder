@@ -16,7 +16,8 @@ export const TEMPLATES_REGISTRY = [
     id: "modern",
     name: "Modern Professional",
     category: "Professional",
-    description: "High-impact contemporary design with elegant accent highlights and badges",
+    description:
+      "A clear professional layout with colored headings and fine section rules",
     component: ModernProfessional,
     defaultColor: "#2563eb",
     gradient: "from-blue-600 to-indigo-700",
@@ -26,7 +27,8 @@ export const TEMPLATES_REGISTRY = [
     id: "minimalist",
     name: "Minimalist ATS",
     category: "ATS-Friendly",
-    description: "100% ATS parser compliant single-column layout with perfect scannability",
+    description:
+      "Simple single-column layout designed for clear reading and automated parsing",
     component: MinimalistATS,
     defaultColor: "#1f2937",
     gradient: "from-gray-700 to-gray-900",
@@ -36,7 +38,8 @@ export const TEMPLATES_REGISTRY = [
     id: "sidebar",
     name: "Split Sidebar Pro",
     category: "Compact",
-    description: "Organized two-column layout with a stylish left sidebar for skills and credentials",
+    description:
+      "Organized two-column layout with a stylish left sidebar for skills and credentials",
     component: SplitSidebar,
     defaultColor: "#059669",
     gradient: "from-emerald-600 to-teal-700",
@@ -46,7 +49,8 @@ export const TEMPLATES_REGISTRY = [
     id: "executive",
     name: "Executive Luxe",
     category: "Executive",
-    description: "Sophisticated serif typography with prestigious leadership and board formatting",
+    description:
+      "A centered introduction and strong section rules for experienced professionals",
     component: ExecutiveLuxe,
     defaultColor: "#1e3a8a",
     gradient: "from-slate-800 to-blue-950",
@@ -56,7 +60,8 @@ export const TEMPLATES_REGISTRY = [
     id: "creative",
     name: "Creative Studio",
     category: "Creative",
-    description: "Asymmetrical bold layout designed for designers, marketers, and creative directors",
+    description:
+      "A soft header panel and bold section labels for creative portfolios",
     component: CreativeStudio,
     defaultColor: "#7c3aed",
     gradient: "from-purple-600 to-pink-600",
@@ -66,7 +71,8 @@ export const TEMPLATES_REGISTRY = [
     id: "developer",
     name: "Tech & Developer",
     category: "Tech",
-    description: "Monospace touches, GitHub/Portfolio integrations, and categorized tech stacks",
+    description:
+      "A code-inspired introduction with room for projects, skills, and repository links",
     component: TechDeveloper,
     defaultColor: "#0d9488",
     gradient: "from-teal-600 to-cyan-700",
@@ -76,7 +82,8 @@ export const TEMPLATES_REGISTRY = [
     id: "academic",
     name: "Academic Research",
     category: "Academic",
-    description: "Formal scholarly layout with dedicated research, publication, and grant sections",
+    description:
+      "A formal layout you can extend with custom publication and research sections",
     component: AcademicResearch,
     defaultColor: "#18324b",
     gradient: "from-blue-900 to-slate-900",
@@ -86,7 +93,8 @@ export const TEMPLATES_REGISTRY = [
     id: "nordic",
     name: "Nordic Elegance",
     category: "Minimalist",
-    description: "Scandinavian-inspired editorial layout with generous whitespace and modern luxury",
+    description:
+      "Scandinavian-inspired editorial layout with generous whitespace and modern luxury",
     component: NordicElegance,
     defaultColor: "#475569",
     gradient: "from-stone-600 to-slate-800",
