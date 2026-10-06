@@ -126,13 +126,15 @@ export default function ResumeBuilder() {
     const paper = paperRef.current;
     const observer = new ResizeObserver(() => {
       if (wrap?.clientWidth)
-        setFitScale(Math.min(1, Math.max(0.2, (wrap.clientWidth - 48) / 794)));
+        setFitScale(
+          Math.min(previewMode ? 1.3 : 1, Math.max(0.2, (wrap.clientWidth - 48) / 794)),
+        );
       if (paper) setPaperHeight(paper.offsetHeight);
     });
     if (wrap) observer.observe(wrap);
     if (paper) observer.observe(paper);
     return () => observer.disconnect();
-  }, []);
+  }, [previewMode]);
   useEffect(() => {
     const media = window.matchMedia("(max-width: 800px)");
     const update = () => setIsNarrowScreen(media.matches);
@@ -1041,7 +1043,10 @@ export default function ResumeBuilder() {
 
           <button
             className="ghost-btn"
-            onClick={() => setPreviewMode(!previewMode)}
+            onClick={() => {
+              setZoom(null);
+              setPreviewMode(!previewMode);
+            }}
           >
             <Eye size={16} /> {previewMode ? "Edit" : "Preview"}
           </button>
@@ -1297,16 +1302,16 @@ export default function ResumeBuilder() {
               className="paper-size"
               style={{
                 width: 794 * actualZoom,
-                height: paperHeight * actualZoom,
+                height: paperHeight,
               }}
             >
               <div
                 ref={paperRef}
                 id="resume-paper-canvas"
-                className="paper transition-transform duration-150"
+                className="paper"
                 style={{
-                  transform: `scale(${actualZoom})`,
-                  transformOrigin: "top left",
+                  width: 794 * actualZoom,
+                  minHeight: 1123 * actualZoom,
                 }}
               >
                 {(!isNarrowScreen || previewMode) && (

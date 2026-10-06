@@ -13,12 +13,8 @@ export default function ResumePdfPreview({ data, page, zoom, onPageChange, onSta
   const resultRef = useRef(null);
   const imageUrlRef = useRef("");
   const revisionRef = useRef(0);
-  // Render enough pixels for the displayed page, including high-density screens.
-  // Bucketing keeps small fit/resize changes from redrawing the same PDF page.
-  const targetWidth = Math.min(
-    2700,
-    Math.max(1408, Math.ceil((794 * zoom * pixelRatio * 1.5) / 128) * 128),
-  );
+  // Match canvas pixels to screen pixels so the browser does not resample text.
+  const targetWidth = Math.ceil(794 * zoom * pixelRatio);
 
   useEffect(() => {
     const updatePixelRatio = () => setPixelRatio(window.devicePixelRatio || 1);
@@ -97,7 +93,12 @@ export default function ResumePdfPreview({ data, page, zoom, onPageChange, onSta
   }, [result, page, targetWidth, onPageChange, onStatus]);
 
   return (
-    <div className="pdf-preview" aria-label="Exact PDF preview" aria-busy={busy}>
+    <div
+      className="pdf-preview"
+      aria-label="Exact PDF preview"
+      aria-busy={busy}
+      style={{ minHeight: 1123 * zoom }}
+    >
       {error && imageUrl && (
         <div className="pdf-preview-notice" role="alert">
           <AlertCircle size={16} />
