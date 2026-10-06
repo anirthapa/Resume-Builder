@@ -61,15 +61,20 @@ export function createResumeDocument(raw, { fontFamily, photoSource } = {}) {
   const data = migrateResumeData(raw);
   const c = data.customization;
   const theme = PDF_THEMES[c.template] || PDF_THEMES.modern;
+  const minimalist = c.template === "minimalist";
   const accent = c.color || theme.accent;
   const font =
     fontFamily ||
     (theme.serif ? "Times-Roman" : theme.mono ? "Courier" : "Helvetica");
-  const fontSize =
-    { compact: 8.25, normal: 9, spacious: 9.75 }[c.fontSize] || 10;
-  const lineHeight =
-    { tight: 1.3, normal: 1.45, relaxed: 1.6 }[c.lineSpacing] || 1.45;
-  const padding = { compact: 30, balanced: 40, spacious: 52 }[c.margins] || 40;
+  const fontSize = minimalist
+    ? ({ compact: 7.9, normal: 8.4, spacious: 9.2 }[c.fontSize] || 8.4)
+    : ({ compact: 8.25, normal: 9, spacious: 9.75 }[c.fontSize] || 9);
+  const lineHeight = minimalist
+    ? ({ tight: 1.25, normal: 1.32, relaxed: 1.48 }[c.lineSpacing] || 1.32)
+    : ({ tight: 1.3, normal: 1.45, relaxed: 1.6 }[c.lineSpacing] || 1.45);
+  const padding = minimalist
+    ? ({ compact: 25, balanced: 30, spacious: 42 }[c.margins] || 30)
+    : ({ compact: 30, balanced: 40, spacious: 52 }[c.margins] || 40);
   const p = data.personalInfo;
   const name = join(p.firstName, p.lastName).replace(" · ", " ") || "Your Name";
   const text = (value, style = {}, props = {}) =>
@@ -88,9 +93,9 @@ export function createResumeDocument(raw, { fontFamily, photoSource } = {}) {
       fontSize: fontSize + 0.5,
       fontWeight: 700,
       color: accent,
-      marginTop: c.fontSize === "compact" ? 8 : 12,
-      marginBottom: c.fontSize === "compact" ? 4 : 7,
-      paddingBottom: 4,
+      marginTop: minimalist ? 7 : c.fontSize === "compact" ? 8 : 12,
+      marginBottom: minimalist ? 4 : c.fontSize === "compact" ? 4 : 7,
+      paddingBottom: minimalist ? 3 : 4,
       letterSpacing: 0.25,
       textTransform: "uppercase",
     };
@@ -116,22 +121,24 @@ export function createResumeDocument(raw, { fontFamily, photoSource } = {}) {
       minPresenceAhead: fontSize * lineHeight * 3,
     });
   };
-  const paragraph = (value, key) => text(value, { marginBottom: 5 }, { key });
+  const paragraph = (value, key) =>
+    text(value, { marginBottom: minimalist ? 3 : 5 }, { key });
   const bullets = (items) =>
     items
       .filter((item) => item.trim())
       .map((item, i) =>
         text(
           `${c.bulletStyle === "dash" ? "–" : c.bulletStyle === "arrow" ? "›" : "•"}  ${item.replace(/^[•▸]\s*/, "")}`,
-          { marginBottom: 3, paddingLeft: 8 },
+          { marginBottom: minimalist ? 1 : 3, paddingLeft: 8 },
           { key: `bullet-${i}` },
         ),
       );
-  const link = (value, label = value) =>
+  const link = (value, label = value, key) =>
     safeUrl(value)
       ? h(
           Link,
           {
+            key,
             src: safeUrl(value),
             style: {
               color: accent,
@@ -141,7 +148,7 @@ export function createResumeDocument(raw, { fontFamily, photoSource } = {}) {
           },
           label,
         )
-      : text(label, { fontSize: fontSize - 1 });
+      : text(label, { fontSize: fontSize - 1 }, { key });
   // Short entries stay intact; long entries can flow naturally across pages.
   const entry = (item, children) =>
     h(
@@ -149,7 +156,7 @@ export function createResumeDocument(raw, { fontFamily, photoSource } = {}) {
       {
         key: item.id,
         wrap: JSON.stringify(item).length > 1200,
-        style: { marginBottom: c.fontSize === "compact" ? 5 : 9 },
+        style: { marginBottom: minimalist || c.fontSize === "compact" ? 5 : 9 },
       },
       ...children,
     );
@@ -160,7 +167,11 @@ export function createResumeDocument(raw, { fontFamily, photoSource } = {}) {
       { minPresenceAhead: fontSize * lineHeight * 2 },
     );
   const muted = (value) =>
-    text(value, { color: "#5c6570", fontSize: fontSize - 1, marginBottom: 3 });
+    text(value, {
+      color: "#5c6570",
+      fontSize: fontSize - 1,
+      marginBottom: minimalist ? 1 : 3,
+    });
   const dates = (start, end, current) =>
     [date(start), current ? "Present" : date(end)].filter(Boolean).join(" — ");
   const sections = {
@@ -210,8 +221,29 @@ export function createResumeDocument(raw, { fontFamily, photoSource } = {}) {
               title(join(item.name, item.role)),
               ...(item.technologies ? [muted(item.technologies)] : []),
               ...(item.description ? [paragraph(item.description)] : []),
-              ...(item.link ? [link(item.link)] : []),
-              ...(item.github ? [link(item.github)] : []),
+              ...(minimalist && (item.link || item.github)
+                ? [
+                    h(
+                      Text,
+                      {
+                        style: {
+                          fontSize: fontSize - 1,
+                          marginBottom: 1,
+                        },
+                      },
+                      ...[item.link, item.github]
+                        .filter(Boolean)
+                        .flatMap((url, index) =>
+                          index
+                            ? ["  ·  ", link(url, url, `project-link-${index}`)]
+                            : [link(url, url, `project-link-${index}`)],
+                        ),
+                    ),
+                  ]
+                : [
+                    ...(item.link ? [link(item.link)] : []),
+                    ...(item.github ? [link(item.github)] : []),
+                  ]),
             ]),
           ),
         ]
@@ -226,19 +258,47 @@ export function createResumeDocument(raw, { fontFamily, photoSource } = {}) {
       ? [
           heading("Certifications", "certifications"),
           ...data.certifications.map((item) =>
-            entry(item, [
-              title(item.name),
-              muted(join(item.issuer, date(item.date))),
-            ]),
+            entry(
+              item,
+              minimalist
+                ? [
+                    text(
+                      [
+                        h(
+                          Text,
+                          { key: "name", style: { fontWeight: 700 } },
+                          item.name,
+                        ),
+                        item.issuer ? ` · ${item.issuer}` : "",
+                        item.date ? ` · ${date(item.date)}` : "",
+                      ],
+                      { marginBottom: 1 },
+                    ),
+                  ]
+                : [title(item.name), muted(join(item.issuer, date(item.date)))],
+            ),
           ),
         ]
       : [],
     languages: data.languages.length
       ? [
           heading("Languages", "languages"),
-          ...data.languages.map((item) =>
-            paragraph(join(item.name, item.proficiency), item.id),
-          ),
+          ...(minimalist
+            ? [
+                paragraph(
+                  data.languages
+                    .map((item) =>
+                      item.proficiency
+                        ? `${item.name} (${item.proficiency})`
+                        : item.name,
+                    )
+                    .join(" · "),
+                  "languages-text",
+                ),
+              ]
+            : data.languages.map((item) =>
+                paragraph(join(item.name, item.proficiency), item.id),
+              )),
         ]
       : [],
     custom: data.customSections.flatMap((item) => [
@@ -286,8 +346,8 @@ export function createResumeDocument(raw, { fontFamily, photoSource } = {}) {
     p.github,
   ].filter(Boolean);
   const headerStyle = {
-    marginBottom: 8,
-    paddingBottom: 14,
+    marginBottom: minimalist ? 4 : 8,
+    paddingBottom: minimalist ? 8 : 14,
     borderBottomWidth: 1.5,
     borderBottomColor: accent,
     ...(theme.center || c.headerStyle === "center"
@@ -348,20 +408,20 @@ export function createResumeDocument(raw, { fontFamily, photoSource } = {}) {
             ]
           : []),
         text(name, {
-          fontSize: 26,
+          fontSize: minimalist ? 21 : 26,
           fontWeight: 700,
           color: theme.center ? "#202b35" : accent,
           lineHeight: 1.15,
-          marginBottom: 5,
+          marginBottom: minimalist ? 3 : 5,
         }),
         text(p.title || "Professional Title", {
-          fontSize: 12,
+          fontSize: minimalist ? 10 : 12,
           color: "#4b5660",
-          marginBottom: 8,
+          marginBottom: minimalist ? 4 : 8,
         }),
         text(contact.join("  ·  "), {
-          fontSize: 8,
-          lineHeight: 1.5,
+          fontSize: minimalist ? 7.2 : 8,
+          lineHeight: minimalist ? 1.3 : 1.5,
           color: "#5c6570",
         }),
       ),

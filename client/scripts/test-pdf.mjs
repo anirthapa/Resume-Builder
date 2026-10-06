@@ -28,7 +28,7 @@ const reports = [];
 async function inspect(
   name,
   data,
-  { expected = [], minPages = 1, fontFamily = "QAInter" } = {},
+  { expected = [], minPages = 1, maxPages, fontFamily = "QAInter" } = {},
 ) {
   const bytes = await renderToBuffer(
     createResumeDocument(data, { fontFamily }),
@@ -41,14 +41,18 @@ async function inspect(
   });
   const doc = await task.promise;
   assert.ok(doc.numPages >= minPages, `${name}: expected ${minPages}+ pages`);
+  if (maxPages)
+    assert.ok(doc.numPages <= maxPages, `${name}: expected at most ${maxPages} pages`);
   let all = "";
   const pages = [];
+  const pageTexts = [];
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i);
     const viewport = page.getViewport({ scale: 1 });
     const content = await page.getTextContent();
     const items = content.items.filter((item) => item.str?.trim());
     const text = items.map((item) => item.str).join(" ");
+    pageTexts.push(text);
     all += " " + text;
     assert.ok(items.length > 1, `${name}: blank page ${i}`);
     for (const item of items) {
@@ -100,6 +104,14 @@ async function inspect(
   }
   for (const value of expected)
     assert.ok(all.includes(value), `${name}: missing text ${value}`);
+  if (data.languages?.length && data.customization.sectionVisibility.languages !== false) {
+    const headingPage = pageTexts.findIndex((page) => page.includes("LANGUAGES"));
+    assert.ok(headingPage >= 0, `${name}: missing Languages heading`);
+    assert.ok(
+      pageTexts[headingPage].includes(data.languages[0].name),
+      `${name}: Languages heading separated from its first entry`,
+    );
+  }
   reports.push({
     name,
     pages: doc.numPages,
@@ -114,6 +126,7 @@ for (const template of Object.keys(PDF_THEMES)) {
   sample.customization.template = template;
   sample.customization.color = PDF_THEMES[template].accent;
   await inspect(template, sample, {
+    ...(template === "minimalist" ? { maxPages: 1 } : {}),
     expected: [
       "Maya Patel",
       "KEY ACCOMPLISHMENTS",
