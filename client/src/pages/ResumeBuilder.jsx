@@ -107,6 +107,7 @@ export default function ResumeBuilder() {
   const [isNarrowScreen, setIsNarrowScreen] = useState(() =>
     window.matchMedia("(max-width: 800px)").matches,
   );
+  const nativePdfViewer = previewMode && !isNarrowScreen && navigator.pdfViewerEnabled === true;
 
   // Persist to local storage
   useEffect(() => {
@@ -1197,7 +1198,7 @@ export default function ResumeBuilder() {
                 `${pdfStatus.pageCount} ${pdfStatus.pageCount === 1 ? "page" : "pages"} · A4`
               )}
             </span>
-            {pdfStatus.pageCount > 1 && (
+            {!nativePdfViewer && pdfStatus.pageCount > 1 && (
               <nav className="pdf-page-nav" aria-label="PDF preview pages">
                 <button
                   type="button"
@@ -1237,32 +1238,34 @@ export default function ResumeBuilder() {
             </button>
 
             {/* Zoom Controls */}
-            <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
-              <button
-                onClick={() => setZoom(Math.max(0.25, actualZoom - 0.1))}
-                className="p-1 rounded text-gray-600 hover:bg-white transition"
-                title="Zoom out"
-              >
-                <ZoomOut size={14} />
-              </button>
-              <span className="text-[11px] font-mono text-gray-600 w-11 text-center">
-                {Math.round(actualZoom * 100)}%
-              </span>
-              <button
-                onClick={() => setZoom(Math.min(1.4, actualZoom + 0.1))}
-                className="p-1 rounded text-gray-600 hover:bg-white transition"
-                title="Zoom in"
-              >
-                <ZoomIn size={14} />
-              </button>
-              <button
-                onClick={() => setZoom(null)}
-                className="p-1 rounded text-gray-600 hover:bg-white transition text-[10px] font-semibold"
-                title="Fit resume to screen"
-              >
-                Fit
-              </button>
-            </div>
+            {!nativePdfViewer && (
+              <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
+                <button
+                  onClick={() => setZoom(Math.max(0.25, actualZoom - 0.1))}
+                  className="p-1 rounded text-gray-600 hover:bg-white transition"
+                  title="Zoom out"
+                >
+                  <ZoomOut size={14} />
+                </button>
+                <span className="text-[11px] font-mono text-gray-600 w-11 text-center">
+                  {Math.round(actualZoom * 100)}%
+                </span>
+                <button
+                  onClick={() => setZoom(Math.min(1.4, actualZoom + 0.1))}
+                  className="p-1 rounded text-gray-600 hover:bg-white transition"
+                  title="Zoom in"
+                >
+                  <ZoomIn size={14} />
+                </button>
+                <button
+                  onClick={() => setZoom(null)}
+                  className="p-1 rounded text-gray-600 hover:bg-white transition text-[10px] font-semibold"
+                  title="Fit resume to screen"
+                >
+                  Fit
+                </button>
+              </div>
+            )}
 
             {/* Export Actions: Direct Download + Print Dialog */}
             <div className="flex items-center gap-2 ml-auto">
@@ -1285,19 +1288,24 @@ export default function ResumeBuilder() {
                 )}
               </button>
 
-              <button
-                className="ghost-btn flex items-center gap-1.5 cursor-pointer"
-                onClick={handlePrint}
-                title="Open the exact PDF in a new tab to print"
-              >
-                <Printer size={14} />
-                <span className="hidden sm:inline">Open PDF</span>
-              </button>
+              {!nativePdfViewer && (
+                <button
+                  className="ghost-btn flex items-center gap-1.5 cursor-pointer"
+                  onClick={handlePrint}
+                  title="Open the exact PDF in a new tab to print"
+                >
+                  <Printer size={14} />
+                  <span className="hidden sm:inline">Open PDF</span>
+                </button>
+              )}
             </div>
           </div>
 
           {/* Paper Canvas */}
-          <div className="paper-wrap" ref={paperWrapRef}>
+          <div
+            className={`paper-wrap ${nativePdfViewer ? "native-pdf-wrap" : ""}`}
+            ref={paperWrapRef}
+          >
             <div
               className="paper-size"
               style={{
@@ -1319,6 +1327,7 @@ export default function ResumeBuilder() {
                     data={data}
                     page={previewPage}
                     zoom={actualZoom}
+                    nativeViewer={nativePdfViewer}
                     onPageChange={setPreviewPage}
                     onStatus={setPdfStatus}
                   />

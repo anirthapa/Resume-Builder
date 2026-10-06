@@ -62,5 +62,5 @@ The optional API requires a separately configured MongoDB connection and deploym
 
 ## Editing and preview
 
-Undo/redo retains the last 60 edits within the current editor session. Compact layout adjusts font size, spacing, and margins together; it does not guarantee a single page. The PDF preview updates after a pause in editing and shows one page at a time; use the page controls to inspect the rest. The previous page stays visible while an update is prepared. On narrow screens, PDF generation pauses while the editor is shown. Download always uses the current resume data.
+Undo/redo retains the last 60 edits within the current editor session. Compact layout adjusts font size, spacing, and margins together; it does not guarantee a single page. The PDF preview updates after a pause in editing. On supported desktop browsers, full Preview uses the browser's PDF viewer for sharp, selectable text and its own page and zoom controls. The editor and narrow screens show one page at a time. On narrow screens, PDF generation pauses while the editor is shown. Download always uses the current resume data.
 

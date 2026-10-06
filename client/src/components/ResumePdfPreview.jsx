@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { AlertCircle, FileText, Loader2 } from "lucide-react";
 import { generateResumePdf, renderResumePdfPage } from "../utils/exportPdf";
 
-export default function ResumePdfPreview({ data, page, zoom, onPageChange, onStatus }) {
+export default function ResumePdfPreview({ data, page, zoom, nativeViewer, onPageChange, onStatus }) {
   const [result, setResult] = useState(null);
   const [imageUrl, setImageUrl] = useState("");
+  const [pdfUrl, setPdfUrl] = useState("");
   const [displayed, setDisplayed] = useState(null);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState("");
@@ -28,6 +29,13 @@ export default function ResumePdfPreview({ data, page, zoom, onPageChange, onSta
     },
     [],
   );
+
+  useEffect(() => {
+    if (!result) return;
+    const url = URL.createObjectURL(result.blob);
+    setPdfUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [result]);
 
   useEffect(() => {
     const revision = ++revisionRef.current;
@@ -62,6 +70,12 @@ export default function ResumePdfPreview({ data, page, zoom, onPageChange, onSta
 
   useEffect(() => {
     if (!result) return;
+    if (nativeViewer) {
+      setError("");
+      setBusy(false);
+      onStatus({ busy: false, pageCount: result.pageCount });
+      return;
+    }
     if (page > result.pageCount) {
       onPageChange(1);
       return;
@@ -90,7 +104,9 @@ export default function ResumePdfPreview({ data, page, zoom, onPageChange, onSta
     return () => {
       cancelled = true;
     };
-  }, [result, page, targetWidth, onPageChange, onStatus]);
+  }, [result, page, targetWidth, nativeViewer, onPageChange, onStatus]);
+
+  const previewAvailable = nativeViewer ? pdfUrl : imageUrl;
 
   return (
     <div
@@ -99,14 +115,14 @@ export default function ResumePdfPreview({ data, page, zoom, onPageChange, onSta
       aria-busy={busy}
       style={{ minHeight: 1123 * zoom }}
     >
-      {error && imageUrl && (
+      {error && previewAvailable && (
         <div className="pdf-preview-notice" role="alert">
           <AlertCircle size={16} />
           <span>Showing the last preview. {error}</span>
           <button onClick={() => setRetry((value) => value + 1)}>Retry</button>
         </div>
       )}
-      {!imageUrl && !error && (
+      {!previewAvailable && !error && (
         <div className="pdf-placeholder" role="status">
           <div className="pdf-placeholder-icon">
             {busy ? (
@@ -119,7 +135,7 @@ export default function ResumePdfPreview({ data, page, zoom, onPageChange, onSta
           <span>Your resume will appear here shortly.</span>
         </div>
       )}
-      {!imageUrl && error && (
+      {!previewAvailable && error && (
         <div className="pdf-render-error" role="alert">
           <AlertCircle size={22} />
           <p>{error}</p>
@@ -131,7 +147,14 @@ export default function ResumePdfPreview({ data, page, zoom, onPageChange, onSta
           </button>
         </div>
       )}
-      {imageUrl && (
+      {nativeViewer && pdfUrl && (
+        <iframe
+          className="pdf-document-frame"
+          src={`${pdfUrl}#zoom=125&navpanes=0`}
+          title="Resume PDF preview"
+        />
+      )}
+      {!nativeViewer && imageUrl && (
         <figure className="pdf-page">
           <img
             src={imageUrl}
