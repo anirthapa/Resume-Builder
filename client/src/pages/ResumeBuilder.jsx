@@ -911,6 +911,7 @@ export default function ResumeBuilder() {
               onClick={() =>
                 addItem("customSections", {
                   title: "Awards & Honors",
+                  body: "",
                   items: [""],
                 })
               }
@@ -935,7 +936,18 @@ export default function ResumeBuilder() {
                 placeholder="e.g. Volunteer Experience, Publications"
               />
               <label className="builder-field mt-3">
-                <span>Section Bullet Items (One per line)</span>
+                <span>Section text</span>
+                <textarea
+                  value={c.body || ""}
+                  onChange={(e) =>
+                    updateItem("customSections", c.id, "body", e.target.value)
+                  }
+                  placeholder="Write a short paragraph or several lines about this section..."
+                  rows={5}
+                />
+              </label>
+              <label className="builder-field mt-3">
+                <span>Bullet points (optional, one per line)</span>
                 <textarea
                   value={(c.items || []).join("\n")}
                   onChange={(e) =>

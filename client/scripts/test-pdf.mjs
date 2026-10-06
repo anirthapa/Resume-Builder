@@ -160,6 +160,22 @@ for (const template of Object.keys(PDF_THEMES)) {
     ],
   });
 }
+const customText = copyObject(STARTER_RESUME);
+customText.customization.headingStyle = "left-bar";
+customText.customSections = [{
+  id: "custom-text",
+  title: "Selected Work",
+  body: "Designed a research program across three teams.\nPresented findings to product leadership.",
+  items: ["Published the resulting design guide."],
+}];
+await inspect("custom-text-left-bar", customText, {
+  expected: [
+    "SELECTED WORK",
+    "Designed a research program across three teams.",
+    "Presented findings to product leadership.",
+    "Published the resulting design guide.",
+  ],
+});
 const huge = copyObject(STARTER_RESUME);
 huge.experience = [
   {

@@ -186,6 +186,7 @@ export default function ExecutiveLuxe({ data, customization }) {
         {customSections.map((c) => (
           <section key={c.id} className="mb-4">
             {renderSectionHeading(c.title || "Additional Honors & Affiliations")}
+            {c.body?.trim() && <p className="text-xs text-gray-700 leading-normal whitespace-pre-line mb-2">{c.body}</p>}
             <ul className={`${bulletClass} font-serif`}>
               {(c.items || []).map((item, i) => (
                 <li key={i} className="text-xs text-gray-700 leading-normal">{item}</li>

@@ -330,7 +330,7 @@ export function migrateResumeData(raw) {
     projects: ["name", "role", "link", "github", "technologies", "description"],
     certifications: ["name", "issuer", "date", "link"],
     languages: ["name", "proficiency"],
-    customSections: ["title"],
+    customSections: ["title", "body"],
   };
   for (const [collection, keys] of Object.entries(fields)) {
     base[collection] = (Array.isArray(raw[collection]) ? raw[collection] : [])

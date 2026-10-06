@@ -151,6 +151,7 @@ export default function NordicElegance({ data, customization }) {
         {customSections.map((c) => (
           <section key={c.id} className="mb-6">
             {renderSectionHeading(c.title || "Additional Information")}
+            {c.body?.trim() && <p className="text-gray-600 text-xs leading-normal whitespace-pre-line mb-2">{c.body}</p>}
             <ul className={`${bulletClass} font-light`}>
               {(c.items || []).map((item, i) => (
                 <li key={i} className="text-gray-600 text-xs leading-normal">{item}</li>

@@ -44,7 +44,7 @@ export default function MinimalistATS({ data, customization }) {
 
   const renderSectionHeading = (title) => (
     <h2
-      className={`text-xs font-bold uppercase tracking-widest text-gray-900 mt-5 border-b pb-1 ${headingClass}`}
+      className={`text-xs font-bold uppercase tracking-widest text-gray-900 mt-5 ${headingClass}`}
       style={{ borderColor: accent }}
     >
       {title}
@@ -168,6 +168,7 @@ export default function MinimalistATS({ data, customization }) {
         {customSections.map((c) => (
           <section key={c.id} className="mb-4">
             {renderSectionHeading(c.title || "Additional Information")}
+            {c.body?.trim() && <p className="text-gray-800 text-xs leading-normal whitespace-pre-line mb-2">{c.body}</p>}
             <ul className={bulletClass}>
               {(c.items || []).map((item, i) => (
                 <li key={i} className="text-gray-800 text-xs leading-normal">{item}</li>

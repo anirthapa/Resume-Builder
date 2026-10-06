@@ -249,6 +249,7 @@ export default function SplitSidebar({ data, customization }) {
                 >
                   {c.title}
                 </h3>
+                {c.body?.trim() && <p className="text-xs text-gray-700 leading-normal whitespace-pre-line mb-2">{c.body}</p>}
                 <ul className={bulletClass}>
                   {(c.items || []).map((item, i) => (
                     <li key={i} className="text-xs text-gray-700 leading-normal">{item}</li>

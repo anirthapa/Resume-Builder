@@ -208,6 +208,7 @@ export default function CreativeStudio({ data, customization }) {
         {customSections.map((c) => (
           <section key={c.id} className="mb-5">
             {renderSectionHeading(c.title || "Extra Highlights")}
+            {c.body?.trim() && <p className="text-gray-700 text-xs whitespace-pre-line mb-2">{c.body}</p>}
             <ul className={bulletClass}>
               {(c.items || []).map((item, i) => (
                 <li key={i} className="text-gray-700 text-xs">{item}</li>

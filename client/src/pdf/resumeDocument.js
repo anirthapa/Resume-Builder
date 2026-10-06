@@ -100,12 +100,23 @@ export function createResumeDocument(raw, { fontFamily, photoSource } = {}) {
       textTransform: "uppercase",
     };
     if (c.headingStyle === "left-bar" || theme.heading === "bar")
-      Object.assign(style, {
-        borderLeftWidth: 3,
-        borderLeftColor: accent,
-        paddingLeft: 7,
-      });
-    else if (c.headingStyle === "badge" || theme.heading === "badge")
+      return h(
+        View,
+        {
+          key,
+          wrap: false,
+          minPresenceAhead: fontSize * lineHeight * 3,
+          style: {
+            marginTop: style.marginTop,
+            marginBottom: style.marginBottom,
+            borderLeftWidth: 3,
+            borderLeftColor: accent,
+            paddingLeft: 7,
+          },
+        },
+        text(title, { ...style, marginTop: 0, marginBottom: 0, paddingBottom: 0 }),
+      );
+    if (c.headingStyle === "badge" || theme.heading === "badge")
       Object.assign(style, {
         backgroundColor: "#f1f3f6",
         padding: 6,
@@ -303,6 +314,7 @@ export function createResumeDocument(raw, { fontFamily, photoSource } = {}) {
       : [],
     custom: data.customSections.flatMap((item) => [
       heading(item.title || DEFAULT_SECTION_LABELS.custom, item.id),
+      ...(item.body?.trim() ? [paragraph(item.body.trim(), `${item.id}-body`)] : []),
       ...bullets(item.items),
     ]),
   };

@@ -167,6 +167,7 @@ export default function AcademicResearch({ data, customization }) {
         {customSections.map((c) => (
           <section key={c.id} className="mb-4">
             {renderSectionHeading(c.title || "Academic Service & Affiliations")}
+            {c.body?.trim() && <p className="text-gray-700 text-xs leading-normal whitespace-pre-line mb-2">{c.body}</p>}
             <ul className={bulletClass}>
               {(c.items || []).map((item, i) => (
                 <li key={i} className="text-gray-700 text-xs leading-normal">{item}</li>
